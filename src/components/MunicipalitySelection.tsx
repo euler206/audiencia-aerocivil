@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { plazas, aspirantes, updatePlazaDeseada, getAvailablePlazaByPriority } from '@/lib/data';
@@ -16,55 +17,53 @@ const MunicipalitySelection: React.FC = () => {
   const { cedula } = useParams<{ cedula: string }>();
   const navigate = useNavigate();
   const [municipalitiesWithPriority, setMunicipalitiesWithPriority] = useState<PriorityMunicipality[]>([]);
-  const [nextAvailablePriority, setNextAvailablePriority] = useState(1);
   const [aspirantePuesto, setAspirantePuesto] = useState(0);
+  const [maxPrioridades, setMaxPrioridades] = useState(1);
 
   useEffect(() => {
-    // Find aspirante puesto
     const aspirante = aspirantes.find(a => a.cedula === cedula);
     if (aspirante) {
       setAspirantePuesto(aspirante.puesto);
+      // El número de prioridades que puede seleccionar es igual a su puesto
+      setMaxPrioridades(aspirante.puesto);
+      
+      // Inicializar municipios con prioridad
+      const municipalitiesWithPriority = plazas.map(plaza => ({
+        ...plaza,
+        prioridad: 0
+      }));
+
+      // Si el aspirante ya tenía una plaza seleccionada, establecer como prioridad 1
+      if (aspirante.plazaDeseada) {
+        const index = municipalitiesWithPriority.findIndex(m => m.municipio === aspirante.plazaDeseada);
+        if (index >= 0) {
+          municipalitiesWithPriority[index].prioridad = 1;
+        }
+      }
+      
+      setMunicipalitiesWithPriority(municipalitiesWithPriority);
     }
-    
-    // Initialize municipalities with priority
-    const municipalitiesWithPriority = plazas.map(plaza => ({
-      ...plaza,
-      prioridad: 0
-    }));
-    
-    setMunicipalitiesWithPriority(municipalitiesWithPriority);
   }, [cedula]);
 
   const handleSetPriority = (municipio: string) => {
     setMunicipalitiesWithPriority(prev => {
+      const existingPriorities = prev.filter(item => item.prioridad > 0).length;
       return prev.map(item => {
         if (item.municipio === municipio) {
-          // If already has a priority, reset it
+          // Si ya tiene una prioridad, resetearla
           if (item.prioridad > 0) {
             return { ...item, prioridad: 0 };
           }
-          // Otherwise, set the next available priority
-          return { ...item, prioridad: nextAvailablePriority };
+          // Si no tiene prioridad y no hemos alcanzado el límite, asignar la siguiente
+          if (existingPriorities < maxPrioridades) {
+            return { ...item, prioridad: existingPriorities + 1 };
+          }
+          // Si alcanzamos el límite, mostrar mensaje
+          toast.error(`Solo puede seleccionar ${maxPrioridades} prioridades según su puesto`);
+          return item;
         }
         return item;
       });
-    });
-    
-    // Increment the next available priority
-    setNextAvailablePriority(prev => {
-      const updatedMunicipalities = municipalitiesWithPriority.map(item => {
-        if (item.municipio === municipio) {
-          return item.prioridad > 0 ? { ...item, prioridad: 0 } : { ...item, prioridad: prev };
-        }
-        return item;
-      });
-      
-      // Count existing priorities to determine the next one
-      const priorities = updatedMunicipalities
-        .map(item => item.prioridad)
-        .filter(p => p > 0);
-      
-      return priorities.length + 1;
     });
   };
 
@@ -112,7 +111,7 @@ const MunicipalitySelection: React.FC = () => {
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-800 mb-2">Selección de Plaza</h2>
         <p className="text-gray-600">
-          Seleccione las plazas en orden de prioridad. Haga clic en cada municipio para asignar una prioridad.
+          Seleccione hasta {maxPrioridades} plazas en orden de prioridad. Haga clic en cada municipio para asignar una prioridad.
         </p>
       </div>
       
@@ -161,3 +160,4 @@ const MunicipalitySelection: React.FC = () => {
 };
 
 export default MunicipalitySelection;
+
