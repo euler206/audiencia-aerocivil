@@ -19,7 +19,13 @@ const LoginForm: React.FC = () => {
     setIsLoading(true);
     
     try {
-      const success = await login(cedula, opec);
+      // Asegurar que la cédula se trate como string
+      const cedulaString = String(cedula).trim();
+      const opecString = String(opec).trim();
+      
+      console.log("Intentando login con:", cedulaString, opecString);
+      
+      const success = await login(cedulaString, opecString);
       
       if (success) {
         toast.success('Inicio de sesión exitoso');

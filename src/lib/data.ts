@@ -166,8 +166,14 @@ export const getAspiranteByCredentials = (cedula: string, opec: string): Aspiran
     return undefined;
   }
   
-  // Find user by cedula
-  return aspirantes.find(aspirante => aspirante.cedula === cedula);
+  console.log("Buscando aspirante con cédula:", cedula);
+  console.log("Lista de cedulas:", aspirantes.map(a => a.cedula));
+  
+  // Find user by cedula - asegurando que la comparación sea como string
+  const foundAspirante = aspirantes.find(aspirante => String(aspirante.cedula).trim() === String(cedula).trim());
+  console.log("Aspirante encontrado:", foundAspirante);
+  
+  return foundAspirante;
 };
 
 // Helper function to save data to local storage

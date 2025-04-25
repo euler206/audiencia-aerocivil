@@ -29,7 +29,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (cedula: string, opec: string): Promise<boolean> => {
-    const user = getAspiranteByCredentials(cedula, opec);
+    // Asegurarse de que la cédula se esté procesando como string
+    const cedulaString = String(cedula).trim();
+    const opecString = String(opec).trim();
+    
+    const user = getAspiranteByCredentials(cedulaString, opecString);
     
     if (user) {
       setCurrentUser(user);
