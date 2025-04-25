@@ -167,10 +167,16 @@ export const getAspiranteByCredentials = (cedula: string, opec: string): Aspiran
   }
   
   console.log("Buscando aspirante con cédula:", cedula);
-  console.log("Lista de cedulas:", aspirantes.map(a => a.cedula));
   
   // Find user by cedula - asegurando que la comparación sea como string
-  const foundAspirante = aspirantes.find(aspirante => String(aspirante.cedula).trim() === String(cedula).trim());
+  const foundAspirante = aspirantes.find(aspirante => {
+    const aspiranteCedula = String(aspirante.cedula).trim();
+    const searchCedula = String(cedula).trim();
+    const match = aspiranteCedula === searchCedula;
+    console.log(`Comparando: "${aspiranteCedula}" === "${searchCedula}" => ${match}`);
+    return match;
+  });
+  
   console.log("Aspirante encontrado:", foundAspirante);
   
   return foundAspirante;
