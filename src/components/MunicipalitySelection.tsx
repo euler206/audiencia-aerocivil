@@ -103,7 +103,7 @@ const MunicipalitySelection: React.FC = () => {
     setMunicipalitiesWithPriority(prev => 
       prev.map(item => ({ ...item, prioridad: 0 }))
     );
-    setNextAvailablePriority(1);
+    // Eliminamos la referencia a setNextAvailablePriority que causaba el error
   };
 
   return (
@@ -160,4 +160,3 @@ const MunicipalitySelection: React.FC = () => {
 };
 
 export default MunicipalitySelection;
-
