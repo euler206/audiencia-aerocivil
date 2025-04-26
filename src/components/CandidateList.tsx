@@ -1,22 +1,53 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Aspirante, aspirantes, loadFromLocalStorage } from '@/lib/data';
+import { Aspirante, aspirantes, loadFromLocalStorage, plazas } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
+import { useToast } from "@/hooks/use-toast";
 
 const CandidateList: React.FC = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [search, setSearch] = useState('');
   const [displayedAspirantes, setDisplayedAspirantes] = useState<Aspirante[]>([...aspirantes]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     loadFromLocalStorage();
     setDisplayedAspirantes([...aspirantes]);
   }, []);
 
   const handleSelectVacancy = (cedula: string) => {
+    const aspirante = aspirantes.find(a => a.cedula === cedula);
+    if (!aspirante) return;
+
+    // Si el aspirante ya tiene una plaza seleccionada, permitir cambiarla
+    if (!aspirante.plazaDeseada) {
+      // Contar cuántos aspirantes han seleccionado cada plaza
+      const plazasSeleccionadas = aspirantes.reduce((acc, curr) => {
+        if (curr.plazaDeseada) {
+          acc[curr.plazaDeseada] = (acc[curr.plazaDeseada] || 0) + 1;
+        }
+        return acc;
+      }, {} as Record<string, number>);
+
+      // Verificar si alguna plaza ha alcanzado su límite
+      const plazasLlenas = Object.entries(plazasSeleccionadas).filter(([nombrePlaza, cantidad]) => {
+        const plaza = plazas.find(p => p.nombre === nombrePlaza);
+        return plaza && cantidad >= plaza.vacantes;
+      });
+
+      if (plazasLlenas.length > 0) {
+        toast({
+          title: "Algunas plazas están llenas",
+          description: "Las siguientes plazas ya no tienen cupos disponibles: " + 
+                      plazasLlenas.map(([nombre]) => nombre).join(", "),
+          variant: "destructive"
+        });
+      }
+    }
+
     navigate(`/select-vacancy/${cedula}`);
   };
 
@@ -71,27 +102,39 @@ const CandidateList: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {displayedAspirantes.map((aspirante) => (
-              <tr key={aspirante.cedula} className="table-row">
-                <td className="table-cell">{aspirante.puesto}</td>
-                <td className="table-cell">{aspirante.puntaje}</td>
-                <td className="table-cell">{aspirante.cedula}</td>
-                <td className="table-cell">{aspirante.nombre}</td>
-                <td className="table-cell">
-                  {aspirante.plazaDeseada || <span className="text-gray-400">No seleccionada</span>}
-                </td>
-                <td className="table-cell">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => handleSelectVacancy(aspirante.cedula)}
-                    className="bg-aeronautica text-white hover:bg-aeronautica-light"
-                  >
-                    Seleccionar Plaza
-                  </Button>
-                </td>
-              </tr>
-            ))}
+            {displayedAspirantes.map((aspirante) => {
+              const plazaSeleccionada = plazas.find(p => p.nombre === aspirante.plazaDeseada);
+              const aspirantesConMismaPlaza = aspirantes.filter(a => a.plazaDeseada === aspirante.plazaDeseada).length;
+              const plazaLlena = plazaSeleccionada && aspirantesConMismaPlaza >= plazaSeleccionada.vacantes;
+
+              return (
+                <tr key={aspirante.cedula} className="table-row">
+                  <td className="table-cell">{aspirante.puesto}</td>
+                  <td className="table-cell">{aspirante.puntaje}</td>
+                  <td className="table-cell">{aspirante.cedula}</td>
+                  <td className="table-cell">{aspirante.nombre}</td>
+                  <td className="table-cell">
+                    {aspirante.plazaDeseada ? (
+                      <span className={plazaLlena ? "text-red-600" : "text-green-600"}>
+                        {aspirante.plazaDeseada}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">No seleccionada</span>
+                    )}
+                  </td>
+                  <td className="table-cell">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleSelectVacancy(aspirante.cedula)}
+                      className="bg-aeronautica text-white hover:bg-aeronautica-light"
+                    >
+                      Seleccionar Plaza
+                    </Button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

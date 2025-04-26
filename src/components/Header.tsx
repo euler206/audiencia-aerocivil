@@ -39,7 +39,7 @@ const Header: React.FC = () => {
               variant="outline" 
               size="sm" 
               onClick={handleLogout} 
-              className="border-aeronautica-foreground/20 hover:bg-aeronautica-light"
+              className="bg-red-600 hover:bg-red-700 text-white border-none"
             >
               <LogOut className="h-4 w-4 mr-1" />
               Salir
