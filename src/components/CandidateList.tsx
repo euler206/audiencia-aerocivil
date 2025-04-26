@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Aspirante, aspirantes, loadFromLocalStorage, plazas } from '@/lib/data';
@@ -22,30 +21,27 @@ const CandidateList: React.FC = () => {
     const aspirante = aspirantes.find(a => a.cedula === cedula);
     if (!aspirante) return;
 
-    // Si el aspirante ya tiene una plaza seleccionada, permitir cambiarla
-    if (!aspirante.plazaDeseada) {
-      // Contar cuántos aspirantes han seleccionado cada plaza
-      const plazasSeleccionadas = aspirantes.reduce((acc, curr) => {
-        if (curr.plazaDeseada) {
-          acc[curr.plazaDeseada] = (acc[curr.plazaDeseada] || 0) + 1;
-        }
-        return acc;
-      }, {} as Record<string, number>);
-
-      // Verificar si alguna plaza ha alcanzado su límite
-      const plazasLlenas = Object.entries(plazasSeleccionadas).filter(([nombrePlaza, cantidad]) => {
-        const plaza = plazas.find(p => p.nombre === nombrePlaza);
-        return plaza && cantidad >= plaza.vacantes;
-      });
-
-      if (plazasLlenas.length > 0) {
-        toast({
-          title: "Algunas plazas están llenas",
-          description: "Las siguientes plazas ya no tienen cupos disponibles: " + 
-                      plazasLlenas.map(([nombre]) => nombre).join(", "),
-          variant: "destructive"
-        });
+    // Contar cuántos aspirantes han seleccionado cada plaza
+    const plazasSeleccionadas = aspirantes.reduce((acc, curr) => {
+      if (curr.plazaDeseada && curr.cedula !== cedula) { // Excluimos al aspirante actual
+        acc[curr.plazaDeseada] = (acc[curr.plazaDeseada] || 0) + 1;
       }
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Verificar si alguna plaza ha alcanzado su límite
+    const plazasLlenas = plazas.filter(plaza => {
+      const seleccionadas = plazasSeleccionadas[plaza.municipio] || 0;
+      return seleccionadas >= plaza.vacantes;
+    });
+
+    if (plazasLlenas.length > 0) {
+      toast({
+        title: "Algunas plazas están llenas",
+        description: "Las siguientes plazas ya no tienen cupos disponibles: " + 
+                    plazasLlenas.map(plaza => plaza.municipio).join(", "),
+        variant: "destructive"
+      });
     }
 
     navigate(`/select-vacancy/${cedula}`);
@@ -103,8 +99,10 @@ const CandidateList: React.FC = () => {
           </thead>
           <tbody>
             {displayedAspirantes.map((aspirante) => {
-              const plazaSeleccionada = plazas.find(p => p.nombre === aspirante.plazaDeseada);
-              const aspirantesConMismaPlaza = aspirantes.filter(a => a.plazaDeseada === aspirante.plazaDeseada).length;
+              const plazaSeleccionada = plazas.find(p => p.municipio === aspirante.plazaDeseada);
+              const aspirantesConMismaPlaza = aspirantes.filter(
+                a => a.plazaDeseada === aspirante.plazaDeseada && a.cedula !== aspirante.cedula
+              ).length;
               const plazaLlena = plazaSeleccionada && aspirantesConMismaPlaza >= plazaSeleccionada.vacantes;
 
               return (
