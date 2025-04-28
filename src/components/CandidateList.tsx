@@ -1,6 +1,12 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Aspirante, aspirantes, loadFromLocalStorage, plazas } from '@/lib/data';
+import { 
+  Aspirante, 
+  aspirantes, 
+  loadFromLocalStorage, 
+  plazas 
+} from '@/lib';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, FileText, Trash2 } from 'lucide-react';

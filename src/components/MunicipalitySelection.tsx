@@ -1,7 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { plazas, aspirantes, updatePlazaDeseada, getAvailablePlazaByPriority } from '@/lib/data';
+import { 
+  plazas, 
+  aspirantes, 
+  updatePlazaDeseada, 
+  getAvailablePlazaByPriority 
+} from '@/lib';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
