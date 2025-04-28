@@ -5,6 +5,15 @@ import { plazas, aspirantes, updatePlazaDeseada, getAvailablePlazaByPriority } f
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { FileText } from 'lucide-react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF;
+  }
+}
 
 interface PriorityMunicipality {
   departamento: string;
@@ -33,8 +42,19 @@ const MunicipalitySelection: React.FC = () => {
         prioridad: 0
       }));
 
-      // Si el aspirante ya tenía una plaza seleccionada, establecer como prioridad 1
-      if (aspirante.plazaDeseada) {
+      // Cargar prioridades anteriores si existen
+      const prioridadesString = localStorage.getItem(`prioridades_${cedula}`);
+      if (prioridadesString) {
+        const prioridades = JSON.parse(prioridadesString);
+        prioridades.forEach((p: { municipio: string, prioridad: number }) => {
+          const index = municipalitiesWithPriority.findIndex(m => m.municipio === p.municipio);
+          if (index >= 0) {
+            municipalitiesWithPriority[index].prioridad = p.prioridad;
+          }
+        });
+      } 
+      // Si no hay prioridades guardadas pero el aspirante ya tenía una plaza seleccionada
+      else if (aspirante.plazaDeseada) {
         const index = municipalitiesWithPriority.findIndex(m => m.municipio === aspirante.plazaDeseada);
         if (index >= 0) {
           municipalitiesWithPriority[index].prioridad = 1;
@@ -78,6 +98,11 @@ const MunicipalitySelection: React.FC = () => {
       return;
     }
     
+    // Guardar las prioridades en localStorage
+    if (cedula) {
+      localStorage.setItem(`prioridades_${cedula}`, JSON.stringify(priorities));
+    }
+    
     // Get available plaza based on priority
     const selectedPlaza = getAvailablePlazaByPriority(priorities, aspirantePuesto);
     
@@ -103,16 +128,79 @@ const MunicipalitySelection: React.FC = () => {
     setMunicipalitiesWithPriority(prev => 
       prev.map(item => ({ ...item, prioridad: 0 }))
     );
-    // Eliminamos la referencia a setNextAvailablePriority que causaba el error
+  };
+
+  // Función para exportar a PDF
+  const exportToPDF = () => {
+    if (!cedula) return;
+    
+    const aspirante = aspirantes.find(a => a.cedula === cedula);
+    if (!aspirante) return;
+    
+    const doc = new jsPDF();
+    
+    // Título del documento
+    doc.setFontSize(18);
+    doc.text('Selección de Plazas', 14, 22);
+    
+    // Información del aspirante
+    doc.setFontSize(11);
+    doc.text(`Aspirante: ${aspirante.nombre}`, 14, 30);
+    doc.text(`Cédula: ${aspirante.cedula}`, 14, 36);
+    doc.text(`Puesto: ${aspirante.puesto}`, 14, 42);
+    doc.text(`Fecha de selección: ${new Date().toLocaleDateString()}`, 14, 48);
+    
+    // Preparar datos para la tabla
+    const prioridadesSeleccionadas = municipalitiesWithPriority.filter(item => item.prioridad > 0)
+      .sort((a, b) => a.prioridad - b.prioridad);
+    
+    const tableColumn = ['Prioridad', 'Municipio', 'Departamento', 'Vacantes'];
+    const tableRows = prioridadesSeleccionadas.map(item => [
+      item.prioridad,
+      item.municipio,
+      item.departamento,
+      item.vacantes
+    ]);
+    
+    // Generar la tabla
+    doc.autoTable({
+      head: [tableColumn],
+      body: tableRows,
+      startY: 55,
+      theme: 'striped',
+      styles: { fontSize: 10, cellPadding: 3 },
+      headStyles: { fillColor: [0, 48, 87], textColor: [255, 255, 255] }
+    });
+    
+    // Información sobre plaza asignada actual
+    if (aspirante.plazaDeseada) {
+      const lastY = (doc as any).lastAutoTable.finalY || 60;
+      doc.text(`Plaza actualmente asignada: ${aspirante.plazaDeseada}`, 14, lastY + 10);
+    }
+    
+    // Guardar el PDF
+    doc.save(`seleccion-plazas-${aspirante.cedula}.pdf`);
+    
+    toast.success('La selección de plazas se ha exportado a PDF correctamente');
   };
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">Selección de Plaza</h2>
-        <p className="text-gray-600">
-          Seleccione hasta {maxPrioridades} plazas en orden de prioridad. Haga clic en cada municipio para asignar una prioridad.
-        </p>
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Selección de Plaza</h2>
+          <p className="text-gray-600">
+            Seleccione hasta {maxPrioridades} plazas en orden de prioridad. Haga clic en cada municipio para asignar una prioridad.
+          </p>
+        </div>
+        
+        <Button 
+          onClick={exportToPDF}
+          className="bg-aeronautica hover:bg-aeronautica-light"
+        >
+          <FileText className="mr-2 h-4 w-4" />
+          Exportar a PDF
+        </Button>
       </div>
       
       <div className="mb-6 flex flex-wrap items-center gap-2">
@@ -124,24 +212,45 @@ const MunicipalitySelection: React.FC = () => {
       </div>
       
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
-        {municipalitiesWithPriority.map((plaza) => (
-          <Card 
-            key={plaza.municipio} 
-            className={`cursor-pointer hover:shadow-md transition-shadow ${plaza.prioridad > 0 ? 'border-blue-300' : ''}`}
-            onClick={() => handleSetPriority(plaza.municipio)}
-          >
-            <CardContent className="p-4">
-              <div className="font-medium">{plaza.municipio}</div>
-              <div className="text-sm text-gray-600">{plaza.departamento}</div>
-              <div className="text-sm">Vacantes: <span className="font-semibold">{plaza.vacantes}</span></div>
-              {plaza.prioridad > 0 && (
-                <div className={`mt-2 priority-badge ${plaza.prioridad === 1 ? 'priority-1' : plaza.prioridad === 2 ? 'priority-2' : 'priority-3'}`}>
-                  Prioridad {plaza.prioridad}
+        {municipalitiesWithPriority.map((plaza) => {
+          // Verificar disponibilidad basado en el puesto del aspirante
+          const aspirantesConMejorPuesto = aspirantes.filter(
+            a => a.plazaDeseada === plaza.municipio && a.puesto < aspirantePuesto
+          ).length;
+          const disponible = aspirantesConMejorPuesto < plaza.vacantes;
+          
+          return (
+            <Card 
+              key={plaza.municipio} 
+              className={`cursor-pointer hover:shadow-md transition-shadow 
+                ${plaza.prioridad > 0 ? 'border-blue-300' : ''}
+                ${!disponible ? 'opacity-50' : ''}
+              `}
+              onClick={() => handleSetPriority(plaza.municipio)}
+            >
+              <CardContent className="p-4">
+                <div className="font-medium">{plaza.municipio}</div>
+                <div className="text-sm text-gray-600">{plaza.departamento}</div>
+                <div className="text-sm">
+                  Vacantes: <span className="font-semibold">{plaza.vacantes}</span>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+                <div className="text-sm">
+                  Ocupadas: <span className="font-semibold">{aspirantesConMejorPuesto}</span>
+                </div>
+                {plaza.prioridad > 0 && (
+                  <div className={`mt-2 priority-badge ${plaza.prioridad === 1 ? 'priority-1' : plaza.prioridad === 2 ? 'priority-2' : 'priority-3'}`}>
+                    Prioridad {plaza.prioridad}
+                  </div>
+                )}
+                {!disponible && (
+                  <div className="mt-2 text-xs text-red-600 font-medium">
+                    No disponible para su puesto
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
       
       <div className="flex justify-end space-x-4">

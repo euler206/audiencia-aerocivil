@@ -1,14 +1,25 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Aspirante, aspirantes, loadFromLocalStorage, plazas } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
+import { Search, FileText } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from '@/contexts/AuthContext';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF;
+  }
+}
 
 const CandidateList: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isAdmin } = useAuth();
   const [search, setSearch] = useState('');
   const [displayedAspirantes, setDisplayedAspirantes] = useState<Aspirante[]>([...aspirantes]);
 
@@ -65,6 +76,54 @@ const CandidateList: React.FC = () => {
     }
   };
 
+  // Función para exportar a PDF
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    
+    // Título del documento
+    doc.setFontSize(18);
+    doc.text('Lista de Aspirantes', 14, 22);
+    
+    // Información del documento
+    doc.setFontSize(11);
+    doc.text('AERONAUTICA CIVIL - OPEC 209961', 14, 30);
+    doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 14, 36);
+    
+    // Preparar los datos para la tabla
+    const tableColumn = ['Puesto', 'Puntaje', isAdmin ? 'Cédula' : '', 'Nombre', 'Plaza Deseada'];
+    const tableRows = displayedAspirantes.map(aspirante => {
+      const data = [
+        aspirante.puesto,
+        aspirante.puntaje,
+        isAdmin ? aspirante.cedula : '',
+        aspirante.nombre,
+        aspirante.plazaDeseada || 'No seleccionada'
+      ];
+      
+      // Si no es admin, filtrar la columna de cédula
+      return isAdmin ? data : data.filter((_, index) => index !== 2);
+    });
+    
+    // Configurar y generar la tabla
+    doc.autoTable({
+      head: [isAdmin ? tableColumn : tableColumn.filter(col => col !== '')],
+      body: tableRows,
+      startY: 40,
+      theme: 'striped',
+      styles: { fontSize: 10, cellPadding: 3 },
+      headStyles: { fillColor: [0, 48, 87], textColor: [255, 255, 255] }
+    });
+    
+    // Guardar el PDF
+    doc.save('listado-aspirantes.pdf');
+    
+    toast({
+      title: "Exportación exitosa",
+      description: "El listado de aspirantes se ha exportado a PDF correctamente",
+      variant: "default"
+    });
+  };
+
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="mb-6">
@@ -74,15 +133,25 @@ const CandidateList: React.FC = () => {
         </p>
       </div>
       
-      <div className="relative mb-6">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-        <Input
-          type="text"
-          placeholder="Buscar por nombre, cédula o plaza deseada..."
-          value={search}
-          onChange={handleSearchChange}
-          className="pl-10"
-        />
+      <div className="flex justify-between items-center mb-6">
+        <div className="relative w-64">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+          <Input
+            type="text"
+            placeholder="Buscar por nombre, cédula o plaza..."
+            value={search}
+            onChange={handleSearchChange}
+            className="pl-10"
+          />
+        </div>
+        
+        <Button 
+          onClick={exportToPDF}
+          className="bg-aeronautica hover:bg-aeronautica-light"
+        >
+          <FileText className="mr-2 h-4 w-4" />
+          Exportar a PDF
+        </Button>
       </div>
       
       <div className="overflow-x-auto bg-white rounded-lg shadow">
@@ -91,7 +160,7 @@ const CandidateList: React.FC = () => {
             <tr>
               <th className="table-header">Puesto</th>
               <th className="table-header">Puntaje</th>
-              <th className="table-header">Cédula</th>
+              {isAdmin && <th className="table-header">Cédula</th>}
               <th className="table-header">Nombre</th>
               <th className="table-header">Plaza Deseada</th>
               <th className="table-header">Acción</th>
@@ -109,7 +178,7 @@ const CandidateList: React.FC = () => {
                 <tr key={aspirante.cedula} className="table-row">
                   <td className="table-cell">{aspirante.puesto}</td>
                   <td className="table-cell">{aspirante.puntaje}</td>
-                  <td className="table-cell">{aspirante.cedula}</td>
+                  {isAdmin && <td className="table-cell">{aspirante.cedula}</td>}
                   <td className="table-cell">{aspirante.nombre}</td>
                   <td className="table-cell">
                     {aspirante.plazaDeseada ? (

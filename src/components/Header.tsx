@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
 
 const Header: React.FC = () => {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -23,6 +23,9 @@ const Header: React.FC = () => {
           <div className="flex items-center mb-3 sm:mb-0">
             <h1 className="text-xl font-bold mr-2">AUDIENCIA PÚBLICA</h1>
             <span className="text-xs bg-aeronautica-light px-2 py-0.5 rounded">OPEC 209961</span>
+            {isAdmin && (
+              <span className="ml-2 text-xs bg-red-500 px-2 py-0.5 rounded">MODO ADMINISTRADOR</span>
+            )}
           </div>
           
           <div className="flex items-center space-x-4">
@@ -36,10 +39,10 @@ const Header: React.FC = () => {
             </div>
             
             <Button 
-              variant="outline" 
+              variant="destructive" 
               size="sm" 
               onClick={handleLogout} 
-              className="bg-red-600 hover:bg-red-700 text-white border-none"
+              className="border-none"
             >
               <LogOut className="h-4 w-4 mr-1" />
               Salir

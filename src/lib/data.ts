@@ -1,3 +1,4 @@
+
 export interface Plaza {
   departamento: string;
   municipio: string;
@@ -213,15 +214,108 @@ export const initializeStorage = () => {
   }
 };
 
-// Update aspirante's plaza deseada
-export const updatePlazaDeseada = (cedula: string, plaza: string) => {
+// Update aspirante's plaza deseada and handle cascading changes
+export const updatePlazaDeseada = (cedula: string, plaza: string): boolean => {
+  // Encontrar el aspirante actual
   const aspiranteIndex = aspirantes.findIndex(a => a.cedula === cedula);
-  if (aspiranteIndex >= 0) {
-    aspirantes[aspiranteIndex].plazaDeseada = plaza;
-    saveToLocalStorage();
-    return true;
+  if (aspiranteIndex < 0) return false;
+  
+  const aspirante = aspirantes[aspiranteIndex];
+  const antiguaPlaza = aspirante.plazaDeseada;
+  
+  // Actualizar la plaza del aspirante actual
+  aspirantes[aspiranteIndex].plazaDeseada = plaza;
+  
+  // Si ya existía una selección previa, realizar actualización en cascada
+  if (antiguaPlaza !== plaza && plaza !== '') {
+    cascadePlazaUpdates(aspirante.puesto, plaza);
   }
-  return false;
+  
+  saveToLocalStorage();
+  return true;
+};
+
+// Función para actualizar en cascada las plazas cuando hay conflictos de prioridad
+export const cascadePlazaUpdates = (puestoOriginal: number, plazaNueva: string) => {
+  // Encontrar todos los aspirantes que tienen la misma plaza y están en puestos inferiores
+  const aspirantesAfectados = aspirantes
+    .filter(a => a.plazaDeseada === plazaNueva && a.puesto > puestoOriginal)
+    .sort((a, b) => a.puesto - b.puesto); // Ordenar por puesto (ascendente)
+  
+  if (aspirantesAfectados.length === 0) return;
+  
+  // Encontrar cuántos aspirantes hay seleccionados para la plaza nueva
+  const plazaSeleccionada = plazas.find(p => p.municipio === plazaNueva);
+  if (!plazaSeleccionada) return;
+  
+  // Contar cuántos aspirantes con mejor puesto ya seleccionaron esta plaza
+  const aspirantesConMejorPuesto = aspirantes.filter(
+    a => a.plazaDeseada === plazaNueva && a.puesto <= puestoOriginal
+  ).length;
+  
+  // Si hay más aspirantes con mejor puesto que vacantes, reasignar a los aspirantes afectados
+  if (aspirantesConMejorPuesto >= plazaSeleccionada.vacantes) {
+    for (const aspiranteAfectado of aspirantesAfectados) {
+      // Buscar sus prioridades
+      reasignarSiguientePrioridad(aspiranteAfectado);
+    }
+  }
+};
+
+// Función para reasignar a un aspirante a su siguiente plaza prioritaria disponible
+export const reasignarSiguientePrioridad = (aspirante: Aspirante): void => {
+  // Si el aspirante no tiene plaza asignada, no hacer nada
+  if (!aspirante.plazaDeseada) return;
+  
+  // Buscar las prioridades del aspirante almacenadas en localStorage
+  const prioridadesString = localStorage.getItem(`prioridades_${aspirante.cedula}`);
+  if (!prioridadesString) {
+    // Si no hay prioridades guardadas, simplemente quitar la plaza
+    const index = aspirantes.findIndex(a => a.cedula === aspirante.cedula);
+    if (index >= 0) {
+      aspirantes[index].plazaDeseada = '';
+    }
+    return;
+  }
+  
+  // Convertir el string de prioridades a un array
+  const prioridades: { municipio: string, prioridad: number }[] = JSON.parse(prioridadesString);
+  
+  // Ordenar prioridades
+  prioridades.sort((a, b) => a.prioridad - b.prioridad);
+  
+  // Buscar la siguiente plaza disponible según las prioridades
+  for (const prioridad of prioridades) {
+    const plazaObj = plazas.find(p => p.municipio === prioridad.municipio);
+    if (!plazaObj) continue;
+    
+    // Verificar disponibilidad considerando sólo aspirantes con mejor puesto
+    const aspirantesConMejorPuesto = aspirantes.filter(
+      a => a.plazaDeseada === prioridad.municipio && a.puesto < aspirante.puesto
+    ).length;
+    
+    if (aspirantesConMejorPuesto < plazaObj.vacantes) {
+      // La plaza está disponible, asignarla
+      const index = aspirantes.findIndex(a => a.cedula === aspirante.cedula);
+      if (index >= 0) {
+        const plazaAnterior = aspirantes[index].plazaDeseada;
+        aspirantes[index].plazaDeseada = prioridad.municipio;
+        
+        // Verificar si este cambio afecta a otros aspirantes
+        if (plazaAnterior !== prioridad.municipio) {
+          cascadePlazaUpdates(aspirante.puesto, prioridad.municipio);
+        }
+        
+        return;
+      }
+    }
+  }
+  
+  // Si no se encontró ninguna plaza disponible, quitar la asignación
+  const index = aspirantes.findIndex(a => a.cedula === aspirante.cedula);
+  if (index >= 0) {
+    aspirantes[index].plazaDeseada = '';
+  }
 };
 
 // Check if a plaza is available based on aspirante position

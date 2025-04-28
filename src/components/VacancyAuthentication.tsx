@@ -11,9 +11,16 @@ const VacancyAuthentication: React.FC = () => {
   const [cedula, setCedula] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [open, setOpen] = useState(true);
-  const { verifyIdentity } = useAuth();
+  const { verifyIdentity, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { cedula: targetCedula } = useParams<{ cedula: string }>();
+
+  // Si es administrador, redirigir directamente sin verificación
+  React.useEffect(() => {
+    if (isAdmin && targetCedula) {
+      navigate(`/municipality-selection/${targetCedula}`);
+    }
+  }, [isAdmin, targetCedula, navigate]);
 
   const handleVerification = (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,6 +48,11 @@ const VacancyAuthentication: React.FC = () => {
     setOpen(false);
     navigate('/dashboard');
   };
+
+  // Si es administrador, no mostrar el diálogo
+  if (isAdmin) {
+    return null;
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
