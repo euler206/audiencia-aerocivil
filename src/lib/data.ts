@@ -1,4 +1,3 @@
-
 export interface Plaza {
   departamento: string;
   municipio: string;
@@ -231,6 +230,18 @@ export const updatePlazaDeseada = (cedula: string, plaza: string): boolean => {
     cascadePlazaUpdates(aspirante.puesto, plaza);
   }
   
+  saveToLocalStorage();
+  return true;
+};
+
+// Nueva función para limpiar todas las plazas deseadas
+export const updateAllPlazasDeseadas = (): boolean => {
+  // Limpiar la plaza deseada de todos los aspirantes
+  aspirantes.forEach(aspirante => {
+    aspirante.plazaDeseada = '';
+  });
+  
+  // Guardar los cambios en localStorage
   saveToLocalStorage();
   return true;
 };

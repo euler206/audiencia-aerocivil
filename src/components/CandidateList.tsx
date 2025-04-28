@@ -1,14 +1,23 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Aspirante, aspirantes, loadFromLocalStorage, plazas } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, FileText } from 'lucide-react';
+import { Search, FileText, Trash2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 declare module 'jspdf' {
   interface jsPDF {
@@ -19,9 +28,10 @@ declare module 'jspdf' {
 const CandidateList: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isAdmin } = useAuth();
+  const { isAdmin, clearAllSelections } = useAuth();
   const [search, setSearch] = useState('');
   const [displayedAspirantes, setDisplayedAspirantes] = useState<Aspirante[]>([...aspirantes]);
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
 
   useEffect(() => {
     loadFromLocalStorage();
@@ -124,6 +134,34 @@ const CandidateList: React.FC = () => {
     });
   };
 
+  // Nueva función para manejar la limpieza de todas las selecciones
+  const handleClearAllSelections = () => {
+    setIsConfirmDialogOpen(true);
+  };
+
+  const confirmClearAllSelections = () => {
+    const success = clearAllSelections();
+    
+    if (success) {
+      loadFromLocalStorage(); // Recargar datos
+      setDisplayedAspirantes([...aspirantes]); // Actualizar la lista
+      
+      toast({
+        title: "Operación exitosa",
+        description: "Se han eliminado todas las selecciones de plazas",
+        variant: "default"
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "No tienes permiso para realizar esta acción",
+        variant: "destructive"
+      });
+    }
+    
+    setIsConfirmDialogOpen(false);
+  };
+
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="mb-6">
@@ -133,8 +171,8 @@ const CandidateList: React.FC = () => {
         </p>
       </div>
       
-      <div className="flex justify-between items-center mb-6">
-        <div className="relative w-64">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div className="relative w-full sm:w-64">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
           <Input
             type="text"
@@ -145,13 +183,26 @@ const CandidateList: React.FC = () => {
           />
         </div>
         
-        <Button 
-          onClick={exportToPDF}
-          className="bg-aeronautica hover:bg-aeronautica-light"
-        >
-          <FileText className="mr-2 h-4 w-4" />
-          Exportar a PDF
-        </Button>
+        <div className="flex gap-2">
+          {isAdmin && (
+            <Button 
+              onClick={handleClearAllSelections}
+              variant="destructive"
+              className="flex items-center"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Borrar Todas las Selecciones
+            </Button>
+          )}
+          
+          <Button 
+            onClick={exportToPDF}
+            className="bg-aeronautica hover:bg-aeronautica-light"
+          >
+            <FileText className="mr-2 h-4 w-4" />
+            Exportar a PDF
+          </Button>
+        </div>
       </div>
       
       <div className="overflow-x-auto bg-white rounded-lg shadow">
@@ -205,6 +256,23 @@ const CandidateList: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      <AlertDialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará todas las selecciones de plazas de todos los aspirantes. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmClearAllSelections} className="bg-destructive text-destructive-foreground">
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

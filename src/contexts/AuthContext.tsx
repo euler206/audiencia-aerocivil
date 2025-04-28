@@ -1,6 +1,6 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { getAspiranteByCredentials, Aspirante, initializeStorage } from '@/lib/data';
+import { getAspiranteByCredentials, Aspirante, initializeStorage, updateAllPlazasDeseadas } from '@/lib/data';
 
 interface AuthContextType {
   currentUser: Aspirante | null;
@@ -9,6 +9,7 @@ interface AuthContextType {
   login: (cedula: string, opec: string) => Promise<boolean>;
   logout: () => void;
   verifyIdentity: (cedula: string) => boolean;
+  clearAllSelections: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -85,8 +86,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return currentUser?.cedula === cedula;
   };
 
+  // Nueva función para limpiar todas las selecciones de plazas
+  const clearAllSelections = (): boolean => {
+    if (!isAdmin) {
+      return false; // Solo el administrador puede realizar esta acción
+    }
+    
+    return updateAllPlazasDeseadas();
+  };
+
   return (
-    <AuthContext.Provider value={{ currentUser, isAuthenticated, isAdmin, login, logout, verifyIdentity }}>
+    <AuthContext.Provider value={{ 
+      currentUser, 
+      isAuthenticated, 
+      isAdmin, 
+      login, 
+      logout, 
+      verifyIdentity,
+      clearAllSelections
+    }}>
       {children}
     </AuthContext.Provider>
   );
