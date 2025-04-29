@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
@@ -125,6 +126,8 @@ const MunicipalitySelection: React.FC = () => {
 
   const exportToPDF = () => {
     try {
+      console.log("Iniciando generación de PDF de selección de plazas...");
+      
       if (!cedula) {
         toast.error("No se encuentra información del aspirante");
         return;
@@ -172,15 +175,14 @@ const MunicipalitySelection: React.FC = () => {
         doc.text(`Plaza actualmente asignada: ${aspirante.plazaDeseada}`, 14, lastY + 10);
       }
       
-      const pdfOutput = doc.output('blob');
-      const pdfUrl = URL.createObjectURL(pdfOutput);
+      console.log("PDF de selección generado correctamente, procediendo a descargar...");
       
-      const newWindow = window.open(pdfUrl, '_blank');
-      if (!newWindow) {
-        toast.error("El navegador bloqueó la apertura de una nueva ventana. Por favor, permita ventanas emergentes.");
-      } else {
-        toast.success('La selección de plazas se ha abierto en una nueva pestaña');
-      }
+      // Usar el método save en lugar de abrir en nueva ventana para asegurar que funcione
+      const pdfName = `seleccion-plaza-${aspirante.cedula}-${new Date().toISOString().slice(0, 10)}.pdf`;
+      doc.save(pdfName);
+      
+      toast.success(`El PDF "${pdfName}" se ha descargado`);
+      
     } catch (error) {
       console.error("Error al generar el PDF:", error);
       const errorMessage = error instanceof Error ? error.message : "Error desconocido";

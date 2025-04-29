@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -87,6 +86,7 @@ const CandidateList: React.FC = () => {
   // Función para exportar a PDF corregida
   const exportToPDF = () => {
     try {
+      console.log("Iniciando generación de PDF...");
       const doc = new jsPDF();
       
       // Título del documento
@@ -123,24 +123,17 @@ const CandidateList: React.FC = () => {
         headStyles: { fillColor: [0, 48, 87], textColor: [255, 255, 255] }
       });
       
-      // Guardar el PDF y abrirlo en una nueva ventana - método corregido
-      const pdfOutput = doc.output('blob');
-      const pdfUrl = URL.createObjectURL(pdfOutput);
+      console.log("PDF generado correctamente, procediendo a descargar...");
       
-      // Abrir en una nueva ventana asegurando que se muestre
-      const newWindow = window.open(pdfUrl, '_blank');
-      if (!newWindow) {
-        toast({
-          title: "Error",
-          description: "El navegador bloqueó la apertura de una nueva ventana. Por favor, permita ventanas emergentes.",
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "Exportación exitosa",
-          description: "El listado de aspirantes se ha abierto en una nueva pestaña",
-        });
-      }
+      // Usar download en lugar de abrir en nueva ventana para asegurar que funcione
+      const pdfName = `lista-aspirantes-${new Date().toISOString().slice(0, 10)}.pdf`;
+      doc.save(pdfName);
+      
+      toast({
+        title: "Exportación exitosa",
+        description: `El PDF "${pdfName}" se ha descargado`,
+      });
+      
     } catch (error) {
       console.error("Error al generar el PDF:", error);
       toast({
