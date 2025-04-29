@@ -21,7 +21,7 @@ const Header: React.FC = () => {
       <div className="container mx-auto px-4 py-4">
         <div className="flex flex-col sm:flex-row justify-between items-center">
           <div className="flex items-center mb-3 sm:mb-0">
-            <h1 className="text-xl font-bold mr-2">AUDIENCIA PÚBLICA</h1>
+            <h1 className="text-xl font-bold mr-2">SIMULACRO AUDIENCIA PÚBLICA</h1>
             <span className="text-xs bg-aeronautica-light px-2 py-0.5 rounded">OPEC 209961</span>
             {isAdmin && (
               <span className="ml-2 text-xs bg-red-500 px-2 py-0.5 rounded">MODO ADMINISTRADOR</span>

@@ -45,7 +45,7 @@ const LoginForm: React.FC = () => {
     <div className="flex items-center justify-center min-h-screen bg-blue-50">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-1 bg-aeronautica text-aeronautica-foreground rounded-t-md">
-          <CardTitle className="text-2xl text-center">AUDIENCIA</CardTitle>
+          <CardTitle className="text-2xl text-center"> SIMULACRO AUDIENCIA</CardTitle>
           <CardDescription className="text-aeronautica-foreground/90 text-center">
             Proceso de Audiencia Pública AERONAUTICA CIVIL - OPEC 209961
           </CardDescription>
