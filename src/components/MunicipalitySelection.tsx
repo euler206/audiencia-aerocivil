@@ -183,10 +183,12 @@ const MunicipalitySelection: React.FC = () => {
       doc.text(`Plaza actualmente asignada: ${aspirante.plazaDeseada}`, 14, lastY + 10);
     }
     
-    // Guardar el PDF
-    doc.save(`seleccion-plazas-${aspirante.cedula}.pdf`);
+    // Abrir el PDF en una nueva ventana en lugar de descargarlo
+    const pdfBlob = doc.output('blob');
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    window.open(pdfUrl, '_blank');
     
-    toast.success('La selección de plazas se ha exportado a PDF correctamente');
+    toast.success('La selección de plazas se ha abierto en una nueva pestaña');
   };
 
   return (

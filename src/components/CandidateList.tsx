@@ -94,7 +94,7 @@ const CandidateList: React.FC = () => {
     
     // Información del documento
     doc.setFontSize(11);
-    doc.text('AERONAUTICA CIVIL - OPEC 209961', 14, 30);
+    doc.text('SIMULACRO AUDIENCIA PUBLICA - AERONAUTICA CIVIL - OPEC 209961', 14, 30);
     doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 14, 36);
     
     // Preparar los datos para la tabla
@@ -122,12 +122,14 @@ const CandidateList: React.FC = () => {
       headStyles: { fillColor: [0, 48, 87], textColor: [255, 255, 255] }
     });
     
-    // Guardar el PDF
-    doc.save('listado-aspirantes.pdf');
+    // Abrir el PDF en una nueva pestaña en lugar de descargarlo
+    const pdfBlob = doc.output('blob');
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    window.open(pdfUrl, '_blank');
     
     toast({
       title: "Exportación exitosa",
-      description: "El listado de aspirantes se ha exportado a PDF correctamente",
+      description: "El listado de aspirantes se ha abierto en una nueva pestaña",
       variant: "default"
     });
   };
@@ -194,3 +196,4 @@ const CandidateList: React.FC = () => {
 };
 
 export default CandidateList;
+

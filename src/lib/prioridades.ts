@@ -36,6 +36,7 @@ export const reasignarSiguientePrioridad = (aspirante: Aspirante): void => {
     const index = aspirantes.findIndex(a => a.cedula === aspirante.cedula);
     if (index >= 0) {
       aspirantes[index].plazaDeseada = '';
+      saveToLocalStorage();
     }
     return;
   }
@@ -47,36 +48,38 @@ export const reasignarSiguientePrioridad = (aspirante: Aspirante): void => {
   prioridades.sort((a, b) => a.prioridad - b.prioridad);
   
   // Buscar la siguiente plaza disponible según las prioridades
+  const plazaAnterior = aspirante.plazaDeseada;
+  let plazaNuevaAsignada = false;
+  
   for (const prioridad of prioridades) {
     const plazaObj = plazas.find(p => p.municipio === prioridad.municipio);
     if (!plazaObj) continue;
     
     // Verificar disponibilidad considerando sólo aspirantes con mejor puesto
-    const aspirantesConMejorPuesto = aspirantes.filter(
-      a => a.plazaDeseada === prioridad.municipio && a.puesto < aspirante.puesto
-    ).length;
-    
-    if (aspirantesConMejorPuesto < plazaObj.vacantes) {
+    if (isPlazaAvailable(prioridad.municipio, aspirante.puesto, aspirantes)) {
       // La plaza está disponible, asignarla
       const index = aspirantes.findIndex(a => a.cedula === aspirante.cedula);
       if (index >= 0) {
-        const plazaAnterior = aspirantes[index].plazaDeseada;
         aspirantes[index].plazaDeseada = prioridad.municipio;
+        plazaNuevaAsignada = true;
         
         // Verificar si este cambio afecta a otros aspirantes
         if (plazaAnterior !== prioridad.municipio) {
           cascadePlazaUpdates(aspirante.puesto, prioridad.municipio);
         }
         
-        return;
+        break; // Terminamos la búsqueda porque ya encontramos una plaza
       }
     }
   }
   
-  // Si no se encontró ninguna plaza disponible, quitar la asignación
-  const index = aspirantes.findIndex(a => a.cedula === aspirante.cedula);
-  if (index >= 0) {
-    aspirantes[index].plazaDeseada = '';
+  // Si no se encontró ninguna plaza disponible y la plaza anterior era diferente, quitar la asignación
+  if (!plazaNuevaAsignada) {
+    const index = aspirantes.findIndex(a => a.cedula === aspirante.cedula);
+    if (index >= 0) {
+      aspirantes[index].plazaDeseada = '';
+      saveToLocalStorage();
+    }
   }
 };
 
@@ -87,11 +90,17 @@ export const cascadePlazaUpdates = (puestoOriginal: number, plazaNueva: string) 
     .filter(a => a.plazaDeseada === plazaNueva && a.puesto > puestoOriginal)
     .sort((a, b) => a.puesto - b.puesto); // Ordenar por puesto (ascendente)
   
-  if (aspirantesAfectados.length === 0) return;
+  if (aspirantesAfectados.length === 0) {
+    saveToLocalStorage();
+    return;
+  }
   
   // Encontrar cuántos aspirantes hay seleccionados para la plaza nueva
   const plazaSeleccionada = plazas.find(p => p.municipio === plazaNueva);
-  if (!plazaSeleccionada) return;
+  if (!plazaSeleccionada) {
+    saveToLocalStorage();
+    return;
+  }
   
   // Contar cuántos aspirantes con mejor puesto ya seleccionaron esta plaza
   const aspirantesConMejorPuesto = aspirantes.filter(
@@ -99,10 +108,18 @@ export const cascadePlazaUpdates = (puestoOriginal: number, plazaNueva: string) 
   ).length;
   
   // Si hay más aspirantes con mejor puesto que vacantes, reasignar a los aspirantes afectados
-  if (aspirantesConMejorPuesto >= plazaSeleccionada.vacantes) {
-    for (const aspiranteAfectado of aspirantesAfectados) {
-      // Buscar sus prioridades
+  if (aspirantesConMejorPuesto > plazaSeleccionada.vacantes) {
+    // Ordenamos por puesto para que los mejores puestos tengan prioridad
+    const aspirantesExcedentes = aspirantesAfectados.slice(
+      0, aspirantesConMejorPuesto - plazaSeleccionada.vacantes
+    );
+    
+    for (const aspiranteAfectado of aspirantesExcedentes) {
+      // Buscar sus prioridades y reasignar
       reasignarSiguientePrioridad(aspiranteAfectado);
     }
   }
+  
+  saveToLocalStorage();
 };
+
