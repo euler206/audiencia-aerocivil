@@ -125,10 +125,16 @@ const MunicipalitySelection: React.FC = () => {
 
   const exportToPDF = () => {
     try {
-      if (!cedula) return;
+      if (!cedula) {
+        toast.error("No se encuentra información del aspirante");
+        return;
+      }
       
       const aspirante = aspirantes.find(a => a.cedula === cedula);
-      if (!aspirante) return;
+      if (!aspirante) {
+        toast.error("No se encuentra información del aspirante");
+        return;
+      }
       
       const doc = new jsPDF();
       
@@ -166,12 +172,19 @@ const MunicipalitySelection: React.FC = () => {
         doc.text(`Plaza actualmente asignada: ${aspirante.plazaDeseada}`, 14, lastY + 10);
       }
       
-      window.open(URL.createObjectURL(doc.output('blob')), '_blank');
+      const pdfOutput = doc.output('blob');
+      const pdfUrl = URL.createObjectURL(pdfOutput);
       
-      toast.success('La selección de plazas se ha abierto en una nueva pestaña');
+      const newWindow = window.open(pdfUrl, '_blank');
+      if (!newWindow) {
+        toast.error("El navegador bloqueó la apertura de una nueva ventana. Por favor, permita ventanas emergentes.");
+      } else {
+        toast.success('La selección de plazas se ha abierto en una nueva pestaña');
+      }
     } catch (error) {
       console.error("Error al generar el PDF:", error);
-      toast.error('Error al generar el PDF');
+      const errorMessage = error instanceof Error ? error.message : "Error desconocido";
+      toast.error(`Error al generar el PDF: ${errorMessage}`);
     }
   };
 

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -122,18 +123,29 @@ const CandidateList: React.FC = () => {
         headStyles: { fillColor: [0, 48, 87], textColor: [255, 255, 255] }
       });
       
-      // Abrir el PDF en una nueva ventana
-      window.open(URL.createObjectURL(doc.output('blob')), '_blank');
+      // Guardar el PDF y abrirlo en una nueva ventana - método corregido
+      const pdfOutput = doc.output('blob');
+      const pdfUrl = URL.createObjectURL(pdfOutput);
       
-      toast({
-        title: "Exportación exitosa",
-        description: "El listado de aspirantes se ha abierto en una nueva pestaña",
-      });
+      // Abrir en una nueva ventana asegurando que se muestre
+      const newWindow = window.open(pdfUrl, '_blank');
+      if (!newWindow) {
+        toast({
+          title: "Error",
+          description: "El navegador bloqueó la apertura de una nueva ventana. Por favor, permita ventanas emergentes.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Exportación exitosa",
+          description: "El listado de aspirantes se ha abierto en una nueva pestaña",
+        });
+      }
     } catch (error) {
       console.error("Error al generar el PDF:", error);
       toast({
         title: "Error",
-        description: "No se pudo generar el PDF",
+        description: "No se pudo generar el PDF: " + (error instanceof Error ? error.message : "Error desconocido"),
         variant: "destructive"
       });
     }
