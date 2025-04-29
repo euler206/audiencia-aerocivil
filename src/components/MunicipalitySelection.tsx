@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
@@ -38,16 +37,13 @@ const MunicipalitySelection: React.FC = () => {
     const aspirante = aspirantes.find(a => a.cedula === cedula);
     if (aspirante) {
       setAspirantePuesto(aspirante.puesto);
-      // El número de prioridades que puede seleccionar es igual a su puesto
       setMaxPrioridades(aspirante.puesto);
       
-      // Inicializar municipios con prioridad
       const municipalitiesWithPriority = plazas.map(plaza => ({
         ...plaza,
         prioridad: 0
       }));
 
-      // Cargar prioridades anteriores si existen
       const prioridadesString = localStorage.getItem(`prioridades_${cedula}`);
       if (prioridadesString) {
         const prioridades = JSON.parse(prioridadesString);
@@ -58,7 +54,6 @@ const MunicipalitySelection: React.FC = () => {
           }
         });
       } 
-      // Si no hay prioridades guardadas pero el aspirante ya tenía una plaza seleccionada
       else if (aspirante.plazaDeseada) {
         const index = municipalitiesWithPriority.findIndex(m => m.municipio === aspirante.plazaDeseada);
         if (index >= 0) {
@@ -75,15 +70,12 @@ const MunicipalitySelection: React.FC = () => {
       const existingPriorities = prev.filter(item => item.prioridad > 0).length;
       return prev.map(item => {
         if (item.municipio === municipio) {
-          // Si ya tiene una prioridad, resetearla
           if (item.prioridad > 0) {
             return { ...item, prioridad: 0 };
           }
-          // Si no tiene prioridad y no hemos alcanzado el límite, asignar la siguiente
           if (existingPriorities < maxPrioridades) {
             return { ...item, prioridad: existingPriorities + 1 };
           }
-          // Si alcanzamos el límite, mostrar mensaje
           toast.error(`Solo puede seleccionar ${maxPrioridades} prioridades según su puesto`);
           return item;
         }
@@ -93,7 +85,6 @@ const MunicipalitySelection: React.FC = () => {
   };
 
   const handleSaveSelection = () => {
-    // Get priorities
     const priorities = municipalitiesWithPriority
       .filter(item => item.prioridad > 0)
       .map(item => ({ municipio: item.municipio, prioridad: item.prioridad }));
@@ -103,12 +94,10 @@ const MunicipalitySelection: React.FC = () => {
       return;
     }
     
-    // Guardar las prioridades en localStorage
     if (cedula) {
       localStorage.setItem(`prioridades_${cedula}`, JSON.stringify(priorities));
     }
     
-    // Get available plaza based on priority
     const selectedPlaza = getAvailablePlazaByPriority(priorities, aspirantePuesto);
     
     if (!selectedPlaza) {
@@ -116,7 +105,6 @@ const MunicipalitySelection: React.FC = () => {
       return;
     }
     
-    // Update aspirante's plaza deseada
     if (cedula) {
       const success = updatePlazaDeseada(cedula, selectedPlaza);
       
@@ -135,60 +123,56 @@ const MunicipalitySelection: React.FC = () => {
     );
   };
 
-  // Función para exportar a PDF
   const exportToPDF = () => {
-    if (!cedula) return;
-    
-    const aspirante = aspirantes.find(a => a.cedula === cedula);
-    if (!aspirante) return;
-    
-    const doc = new jsPDF();
-    
-    // Título del documento
-    doc.setFontSize(18);
-    doc.text('Selección de Plazas', 14, 22);
-    
-    // Información del aspirante
-    doc.setFontSize(11);
-    doc.text(`Aspirante: ${aspirante.nombre}`, 14, 30);
-    doc.text(`Cédula: ${aspirante.cedula}`, 14, 36);
-    doc.text(`Puesto: ${aspirante.puesto}`, 14, 42);
-    doc.text(`Fecha de selección: ${new Date().toLocaleDateString()}`, 14, 48);
-    
-    // Preparar datos para la tabla
-    const prioridadesSeleccionadas = municipalitiesWithPriority.filter(item => item.prioridad > 0)
-      .sort((a, b) => a.prioridad - b.prioridad);
-    
-    const tableColumn = ['Prioridad', 'Municipio', 'Departamento', 'Vacantes'];
-    const tableRows = prioridadesSeleccionadas.map(item => [
-      item.prioridad,
-      item.municipio,
-      item.departamento,
-      item.vacantes
-    ]);
-    
-    // Generar la tabla
-    doc.autoTable({
-      head: [tableColumn],
-      body: tableRows,
-      startY: 55,
-      theme: 'striped',
-      styles: { fontSize: 10, cellPadding: 3 },
-      headStyles: { fillColor: [0, 48, 87], textColor: [255, 255, 255] }
-    });
-    
-    // Información sobre plaza asignada actual
-    if (aspirante.plazaDeseada) {
-      const lastY = (doc as any).lastAutoTable.finalY || 60;
-      doc.text(`Plaza actualmente asignada: ${aspirante.plazaDeseada}`, 14, lastY + 10);
+    try {
+      if (!cedula) return;
+      
+      const aspirante = aspirantes.find(a => a.cedula === cedula);
+      if (!aspirante) return;
+      
+      const doc = new jsPDF();
+      
+      doc.setFontSize(18);
+      doc.text('Selección de Plazas', 14, 22);
+      
+      doc.setFontSize(11);
+      doc.text(`Aspirante: ${aspirante.nombre}`, 14, 30);
+      doc.text(`Cédula: ${aspirante.cedula}`, 14, 36);
+      doc.text(`Puesto: ${aspirante.puesto}`, 14, 42);
+      doc.text(`Fecha de selección: ${new Date().toLocaleDateString()}`, 14, 48);
+      
+      const prioridadesSeleccionadas = municipalitiesWithPriority.filter(item => item.prioridad > 0)
+        .sort((a, b) => a.prioridad - b.prioridad);
+      
+      const tableColumn = ['Prioridad', 'Municipio', 'Departamento', 'Vacantes'];
+      const tableRows = prioridadesSeleccionadas.map(item => [
+        item.prioridad,
+        item.municipio,
+        item.departamento,
+        item.vacantes
+      ]);
+      
+      doc.autoTable({
+        head: [tableColumn],
+        body: tableRows,
+        startY: 55,
+        theme: 'striped',
+        styles: { fontSize: 10, cellPadding: 3 },
+        headStyles: { fillColor: [0, 48, 87], textColor: [255, 255, 255] }
+      });
+      
+      if (aspirante.plazaDeseada) {
+        const lastY = (doc as any).lastAutoTable.finalY || 60;
+        doc.text(`Plaza actualmente asignada: ${aspirante.plazaDeseada}`, 14, lastY + 10);
+      }
+      
+      window.open(URL.createObjectURL(doc.output('blob')), '_blank');
+      
+      toast.success('La selección de plazas se ha abierto en una nueva pestaña');
+    } catch (error) {
+      console.error("Error al generar el PDF:", error);
+      toast.error('Error al generar el PDF');
     }
-    
-    // Abrir el PDF en una nueva ventana en lugar de descargarlo
-    const pdfBlob = doc.output('blob');
-    const pdfUrl = URL.createObjectURL(pdfBlob);
-    window.open(pdfUrl, '_blank');
-    
-    toast.success('La selección de plazas se ha abierto en una nueva pestaña');
   };
 
   return (
@@ -220,7 +204,6 @@ const MunicipalitySelection: React.FC = () => {
       
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
         {municipalitiesWithPriority.map((plaza) => {
-          // Verificar disponibilidad basado en el puesto del aspirante
           const aspirantesConMejorPuesto = aspirantes.filter(
             a => a.plazaDeseada === plaza.municipio && a.puesto < aspirantePuesto
           ).length;

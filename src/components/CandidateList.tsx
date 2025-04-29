@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -84,54 +83,60 @@ const CandidateList: React.FC = () => {
     }
   };
 
-  // Función para exportar a PDF
+  // Función para exportar a PDF corregida
   const exportToPDF = () => {
-    const doc = new jsPDF();
-    
-    // Título del documento
-    doc.setFontSize(18);
-    doc.text('Lista de Aspirantes', 14, 22);
-    
-    // Información del documento
-    doc.setFontSize(11);
-    doc.text('SIMULACRO AUDIENCIA PUBLICA - AERONAUTICA CIVIL - OPEC 209961', 14, 30);
-    doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 14, 36);
-    
-    // Preparar los datos para la tabla
-    const tableColumn = ['Puesto', 'Puntaje', isAdmin ? 'Cédula' : '', 'Nombre', 'Plaza Deseada'];
-    const tableRows = displayedAspirantes.map(aspirante => {
-      const data = [
-        aspirante.puesto,
-        aspirante.puntaje,
-        isAdmin ? aspirante.cedula : '',
-        aspirante.nombre,
-        aspirante.plazaDeseada || 'No seleccionada'
-      ];
+    try {
+      const doc = new jsPDF();
       
-      // Si no es admin, filtrar la columna de cédula
-      return isAdmin ? data : data.filter((_, index) => index !== 2);
-    });
-    
-    // Configurar y generar la tabla
-    doc.autoTable({
-      head: [isAdmin ? tableColumn : tableColumn.filter(col => col !== '')],
-      body: tableRows,
-      startY: 40,
-      theme: 'striped',
-      styles: { fontSize: 10, cellPadding: 3 },
-      headStyles: { fillColor: [0, 48, 87], textColor: [255, 255, 255] }
-    });
-    
-    // Abrir el PDF en una nueva pestaña en lugar de descargarlo
-    const pdfBlob = doc.output('blob');
-    const pdfUrl = URL.createObjectURL(pdfBlob);
-    window.open(pdfUrl, '_blank');
-    
-    toast({
-      title: "Exportación exitosa",
-      description: "El listado de aspirantes se ha abierto en una nueva pestaña",
-      variant: "default"
-    });
+      // Título del documento
+      doc.setFontSize(18);
+      doc.text('Lista de Aspirantes', 14, 22);
+      
+      // Información del documento
+      doc.setFontSize(11);
+      doc.text('SIMULACRO AUDIENCIA PUBLICA - AERONAUTICA CIVIL - OPEC 209961', 14, 30);
+      doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 14, 36);
+      
+      // Preparar los datos para la tabla
+      const tableColumn = ['Puesto', 'Puntaje', isAdmin ? 'Cédula' : '', 'Nombre', 'Plaza Deseada'];
+      const tableRows = displayedAspirantes.map(aspirante => {
+        const data = [
+          aspirante.puesto,
+          aspirante.puntaje,
+          isAdmin ? aspirante.cedula : '',
+          aspirante.nombre,
+          aspirante.plazaDeseada || 'No seleccionada'
+        ];
+        
+        // Si no es admin, filtrar la columna de cédula
+        return isAdmin ? data : data.filter((_, index) => index !== 2);
+      });
+      
+      // Configurar y generar la tabla
+      doc.autoTable({
+        head: [isAdmin ? tableColumn : tableColumn.filter(col => col !== '')],
+        body: tableRows,
+        startY: 40,
+        theme: 'striped',
+        styles: { fontSize: 10, cellPadding: 3 },
+        headStyles: { fillColor: [0, 48, 87], textColor: [255, 255, 255] }
+      });
+      
+      // Abrir el PDF en una nueva ventana
+      window.open(URL.createObjectURL(doc.output('blob')), '_blank');
+      
+      toast({
+        title: "Exportación exitosa",
+        description: "El listado de aspirantes se ha abierto en una nueva pestaña",
+      });
+    } catch (error) {
+      console.error("Error al generar el PDF:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo generar el PDF",
+        variant: "destructive"
+      });
+    }
   };
 
   // Función para manejar la limpieza de todas las selecciones
@@ -196,4 +201,3 @@ const CandidateList: React.FC = () => {
 };
 
 export default CandidateList;
-
