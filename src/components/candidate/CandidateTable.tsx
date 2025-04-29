@@ -23,6 +23,15 @@ const CandidateTable: React.FC<CandidateTableProps> = ({
   isAdmin,
   onSelectVacancy
 }) => {
+  // Crear un mapa para contar cuántos aspirantes han seleccionado cada plaza
+  const plazasSeleccionadasCount: Record<string, number> = {};
+  aspirantes.forEach(aspirante => {
+    if (aspirante.plazaDeseada) {
+      plazasSeleccionadasCount[aspirante.plazaDeseada] = 
+        (plazasSeleccionadasCount[aspirante.plazaDeseada] || 0) + 1;
+    }
+  });
+
   return (
     <div className="overflow-x-auto bg-white rounded-lg shadow">
       <Table>
@@ -39,9 +48,7 @@ const CandidateTable: React.FC<CandidateTableProps> = ({
         <TableBody>
           {aspirantes.map((aspirante) => {
             const plazaSeleccionada = plazas.find(p => p.municipio === aspirante.plazaDeseada);
-            const aspirantesConMismaPlaza = aspirantes.filter(
-              a => a.plazaDeseada === aspirante.plazaDeseada && a.cedula !== aspirante.cedula
-            ).length;
+            const aspirantesConMismaPlaza = plazasSeleccionadasCount[aspirante.plazaDeseada] || 0;
 
             return (
               <CandidateTableRow

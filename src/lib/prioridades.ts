@@ -108,10 +108,10 @@ export const cascadePlazaUpdates = (puestoOriginal: number, plazaNueva: string) 
   ).length;
   
   // Si hay más aspirantes con mejor puesto que vacantes, reasignar a los aspirantes afectados
-  if (aspirantesConMejorPuesto > plazaSeleccionada.vacantes) {
+  if (aspirantesConMejorPuesto >= plazaSeleccionada.vacantes) {
     // Ordenamos por puesto para que los mejores puestos tengan prioridad
     const aspirantesExcedentes = aspirantesAfectados.slice(
-      0, aspirantesConMejorPuesto - plazaSeleccionada.vacantes
+      0, Math.max(0, aspirantesConMejorPuesto + aspirantesAfectados.length - plazaSeleccionada.vacantes)
     );
     
     for (const aspiranteAfectado of aspirantesExcedentes) {
@@ -122,4 +122,3 @@ export const cascadePlazaUpdates = (puestoOriginal: number, plazaNueva: string) 
   
   saveToLocalStorage();
 };
-

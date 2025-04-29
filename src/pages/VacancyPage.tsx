@@ -17,7 +17,7 @@ const VacancyPage: React.FC = () => {
       <Header />
       <VacancyAuthentication />
       
-      <footer className="py-4 bg-aeronautica text-white text-center text-sm absolute bottom-0 w-full">
+      <footer className="py-4 bg-aeronautica text-white text-center text-sm mt-auto w-full">
         <p>SIMULACRO AUDIENCIA PUBLICA - AERONAUTICA CIVIL - OPEC 209961</p>
       </footer>
     </div>

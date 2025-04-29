@@ -33,17 +33,37 @@ export const updatePlazaDeseada = (cedula: string, plaza: string): boolean => {
         if (!prioridadesString) continue;
         
         const prioridades = JSON.parse(prioridadesString);
-        // Buscar si la plaza liberada está en sus prioridades
-        const tienePrioridad = prioridades.some(
+        // Buscar si la plaza liberada está en sus prioridades y con mayor prioridad que su plaza actual
+        const plazaPrioritaria = prioridades.find(
           (p: { municipio: string }) => p.municipio === antiguaPlaza
         );
         
-        if (tienePrioridad) {
-          // Reasignar al aspirante a su siguiente prioridad disponible
-          reasignarSiguientePrioridad(otroAspirante);
-          // Solo procesamos un aspirante a la vez, la función cascadePlazaUpdates
-          // se encargará de las reasignaciones en cadena si es necesario
-          break;
+        if (plazaPrioritaria) {
+          // Verificar si esta plaza liberada tiene mayor prioridad que la actual del aspirante
+          const prioridadPlazaActual = prioridades.find(
+            (p: { municipio: string }) => p.municipio === otroAspirante.plazaDeseada
+          );
+          
+          const esMejorPrioridad = !prioridadPlazaActual || 
+            plazaPrioritaria.prioridad < prioridadPlazaActual.prioridad;
+            
+          if (esMejorPrioridad) {
+            // Reasignar al aspirante a la plaza liberada que es de mayor prioridad para él
+            const index = aspirantes.findIndex(a => a.cedula === otroAspirante.cedula);
+            if (index >= 0) {
+              const plazaAnteriorOtroAspirante = otroAspirante.plazaDeseada;
+              aspirantes[index].plazaDeseada = antiguaPlaza;
+              
+              // Si este aspirante tenía una plaza, verificar si alguien más puede tomarla ahora
+              if (plazaAnteriorOtroAspirante) {
+                // Llamada recursiva para continuar la cadena de reasignaciones
+                cascadePlazaUpdates(otroAspirante.puesto, antiguaPlaza);
+              }
+              
+              // Solo procesamos un aspirante a la vez para esta plaza liberada
+              break;
+            }
+          }
         }
       }
     }
@@ -74,4 +94,3 @@ export const updateAllPlazasDeseadas = (): boolean => {
   saveToLocalStorage();
   return true;
 };
-
