@@ -48,15 +48,6 @@ const CandidateList: React.FC = () => {
       return seleccionadas >= plaza.vacantes;
     });
 
-    if (plazasLlenas.length > 0) {
-      toast({
-        title: "Algunas plazas están llenas",
-        description: "Las siguientes plazas ya no tienen cupos disponibles: " + 
-                    plazasLlenas.map(plaza => plaza.municipio).join(", "),
-        variant: "destructive"
-      });
-    }
-
     navigate(`/select-vacancy/${cedula}`);
   };
 
