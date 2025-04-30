@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
@@ -169,13 +170,14 @@ const MunicipalitySelection: React.FC = () => {
         doc.text(`Plaza actualmente asignada: ${aspirante.plazaDeseada}`, 14, lastY + 10);
       }
       
-      console.log("PDF de selección generado correctamente, procediendo a descargar...");
+      console.log("PDF de selección generado correctamente, procediendo a abrir en nueva ventana...");
       
-      // Usar el método save para descargar el PDF
-      const pdfName = `seleccion-plaza-${aspirante.cedula}-${new Date().toISOString().slice(0, 10)}.pdf`;
-      doc.save(pdfName);
+      // Abrir PDF en una nueva ventana en lugar de descargarlo
+      const pdfBlob = doc.output('blob');
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      window.open(pdfUrl, '_blank');
       
-      toast.success(`El PDF "${pdfName}" se ha descargado`);
+      toast.success("El PDF se ha abierto en una nueva ventana");
       
     } catch (error) {
       console.error("Error al generar el PDF:", error);

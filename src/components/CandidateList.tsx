@@ -78,7 +78,7 @@ const CandidateList: React.FC = () => {
     }
   };
 
-  // Función para exportar a PDF corregida
+  // Función para exportar a PDF modificada para abrir en nueva ventana
   const exportToPDF = () => {
     try {
       console.log("Iniciando generación de PDF...");
@@ -118,15 +118,16 @@ const CandidateList: React.FC = () => {
         headStyles: { fillColor: [0, 48, 87], textColor: [255, 255, 255] }
       });
       
-      console.log("PDF generado correctamente, procediendo a descargar...");
+      console.log("PDF generado correctamente, procediendo a abrir en nueva ventana...");
       
-      // Usar download en lugar de abrir en nueva ventana para asegurar que funcione
-      const pdfName = `lista-aspirantes-${new Date().toISOString().slice(0, 10)}.pdf`;
-      doc.save(pdfName);
+      // Abrir PDF en una nueva ventana en lugar de descargarlo
+      const pdfBlob = doc.output('blob');
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      window.open(pdfUrl, '_blank');
       
       toast({
         title: "Exportación exitosa",
-        description: `El PDF "${pdfName}" se ha descargado`,
+        description: "El PDF se ha abierto en una nueva ventana",
       });
       
     } catch (error) {
