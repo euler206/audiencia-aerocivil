@@ -9,15 +9,13 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import jsPDF from 'jspdf';
+import { jsPDF as jsPDFType } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 import CandidateSearch from './candidate/CandidateSearch';
 import CandidateActions from './candidate/CandidateActions';
 import CandidateTable from './candidate/CandidateTable';
 import ClearSelectionsDialog from './candidate/ClearSelectionsDialog';
-
-// Configure jsPDF with autoTable
-autoTable(jsPDF.API);
 
 const CandidateList: React.FC = () => {
   const navigate = useNavigate();
@@ -111,7 +109,7 @@ const CandidateList: React.FC = () => {
       });
       
       // Configurar y generar la tabla
-      doc.autoTable({
+      autoTable(doc, {
         head: [isAdmin ? tableColumn : tableColumn.filter(col => col !== '')],
         body: tableRows,
         startY: 40,

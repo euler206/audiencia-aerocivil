@@ -11,10 +11,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { FileText } from 'lucide-react';
 import jsPDF from 'jspdf';
+import { jsPDF as jsPDFType } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-
-// Configure jsPDF with autoTable
-autoTable(jsPDF.API);
 
 interface PriorityMunicipality {
   departamento: string;
@@ -157,7 +155,7 @@ const MunicipalitySelection: React.FC = () => {
         item.vacantes
       ]);
       
-      doc.autoTable({
+      autoTable(doc, {
         head: [tableColumn],
         body: tableRows,
         startY: 55,
