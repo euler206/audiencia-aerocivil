@@ -76,7 +76,7 @@ const LoginForm: React.FC = () => {
                 type="text"
                 value={opec}
                 onChange={(e) => setOpec(e.target.value)}
-                placeholder="Ingrese el número OPEC"
+                placeholder="Ingrese el número de OPEC"
                 required
                 className="bg-gray-50"
               />
