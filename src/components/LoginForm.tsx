@@ -69,7 +69,7 @@ const LoginForm: React.FC = () => {
             
             <div className="space-y-2">
               <label htmlFor="opec" className="text-sm font-medium">
-                Número OPEC
+                Número de OPEC
               </label>
               <Input
                 id="opec"
