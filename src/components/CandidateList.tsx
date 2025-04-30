@@ -9,18 +9,15 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 import CandidateSearch from './candidate/CandidateSearch';
 import CandidateActions from './candidate/CandidateActions';
 import CandidateTable from './candidate/CandidateTable';
 import ClearSelectionsDialog from './candidate/ClearSelectionsDialog';
 
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-  }
-}
+// Configure jsPDF with autoTable
+autoTable(jsPDF.API);
 
 const CandidateList: React.FC = () => {
   const navigate = useNavigate();

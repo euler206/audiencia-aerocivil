@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
@@ -12,13 +11,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { FileText } from 'lucide-react';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-  }
-}
+// Configure jsPDF with autoTable
+autoTable(jsPDF.API);
 
 interface PriorityMunicipality {
   departamento: string;
@@ -177,7 +173,7 @@ const MunicipalitySelection: React.FC = () => {
       
       console.log("PDF de selección generado correctamente, procediendo a descargar...");
       
-      // Usar el método save en lugar de abrir en nueva ventana para asegurar que funcione
+      // Usar el método save para descargar el PDF
       const pdfName = `seleccion-plaza-${aspirante.cedula}-${new Date().toISOString().slice(0, 10)}.pdf`;
       doc.save(pdfName);
       
