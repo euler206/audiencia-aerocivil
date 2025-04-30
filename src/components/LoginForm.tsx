@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 
 const LoginForm: React.FC = () => {
   const [cedula, setCedula] = useState('');
-  const [opec, setOpec] = useState('209961');
+  const [opec, setOpec] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
