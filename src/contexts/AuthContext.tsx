@@ -106,10 +106,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const clearAllSelections = async (): Promise<boolean> => {
     if (isAdmin) {
       try {
-        // Actualizar localmente
-        updateAllPlazasDeseadas();
-        
-        // Actualizar en Supabase
+        // Actualizar en Supabase primero
         const { error } = await supabase
           .from('aspirantes')
           .update({ plazaDeseada: null })
@@ -119,6 +116,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.error('Error clearing selections in Supabase:', error);
           return false;
         }
+        
+        // Solo si la actualización en Supabase fue exitosa, actualizar localmente
+        updateAllPlazasDeseadas();
         
         return true;
       } catch (error) {
