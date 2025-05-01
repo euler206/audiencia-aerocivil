@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -27,7 +28,9 @@ const CandidateList: React.FC = () => {
 
   useEffect(() => {
     loadFromLocalStorage();
-    setDisplayedAspirantes([...aspirantes]);
+    // Ordenar aspirantes por puesto después de cargarlos
+    const sortedAspirantes = [...aspirantes].sort((a, b) => a.puesto - b.puesto);
+    setDisplayedAspirantes(sortedAspirantes);
   }, []);
 
   const handleSelectVacancy = (cedula: string) => {
@@ -56,14 +59,16 @@ const CandidateList: React.FC = () => {
     setSearch(searchTerm);
     
     if (searchTerm.trim() === '') {
-      setDisplayedAspirantes([...aspirantes]);
+      // Cuando se limpia la búsqueda, mostrar los aspirantes ordenados por puesto
+      setDisplayedAspirantes([...aspirantes].sort((a, b) => a.puesto - b.puesto));
     } else {
+      // Filtrar por término de búsqueda y luego ordenar por puesto
       const filtered = aspirantes.filter(
         (aspirante) =>
           aspirante.nombre.toLowerCase().includes(searchTerm) ||
           aspirante.cedula.includes(searchTerm) ||
           (aspirante.plazaDeseada && aspirante.plazaDeseada.toLowerCase().includes(searchTerm))
-      );
+      ).sort((a, b) => a.puesto - b.puesto);
       
       setDisplayedAspirantes(filtered);
     }
