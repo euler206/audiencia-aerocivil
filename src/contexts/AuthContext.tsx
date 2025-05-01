@@ -44,7 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUserId(storedCedula);
         
         // Check if admin (corregido para incluir ambos ID de administrador)
-        if (storedCedula === '1082982133' || storedCedula === 'admin') {
+        if (storedCedula === 'admin') {
           setIsAdmin(true);
         }
 
@@ -80,11 +80,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsAuthenticated(true);
         setUserId(cedula);
         setCurrentUser(foundAspirante);
-        
-        // Special admin user
-        if (cedula === '1082982133') {
-          setIsAdmin(true);
-        }
         
         // Store credentials in localStorage
         localStorage.setItem('user_cedula', cedula);
