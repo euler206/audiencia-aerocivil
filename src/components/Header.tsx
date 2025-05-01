@@ -14,7 +14,8 @@ const Header: React.FC = () => {
     navigate('/');
   };
 
-  if (!currentUser) return null;
+  // Modificar esta condición para considerar también si es admin
+  if (!currentUser && !isAdmin) return null;
 
   return (
     <header className="bg-aeronautica text-aeronautica-foreground shadow-md">
@@ -30,12 +31,18 @@ const Header: React.FC = () => {
           
           <div className="flex items-center space-x-4">
             <div className="text-right">
-              <div className="font-medium">{currentUser.nombre}</div>
-              <div className="text-sm text-aeronautica-foreground/80">
-                <span className="font-semibold">Cédula:</span> {currentUser.cedula} | 
-                <span className="font-semibold"> Puesto:</span> {currentUser.puesto} | 
-                <span className="font-semibold"> Puntaje:</span> {currentUser.puntaje}
-              </div>
+              {currentUser ? (
+                <>
+                  <div className="font-medium">{currentUser.nombre}</div>
+                  <div className="text-sm text-aeronautica-foreground/80">
+                    <span className="font-semibold">Cédula:</span> {currentUser.cedula} | 
+                    <span className="font-semibold"> Puesto:</span> {currentUser.puesto} | 
+                    <span className="font-semibold"> Puntaje:</span> {currentUser.puntaje}
+                  </div>
+                </>
+              ) : isAdmin && (
+                <div className="font-medium">Administrador</div>
+              )}
             </div>
             
             <Button 
