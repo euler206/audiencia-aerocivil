@@ -103,10 +103,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     navigate('/');
   };
 
-  const clearAllSelections = (): boolean => {
+  const clearAllSelections = async (): Promise<boolean> => {
     if (isAdmin) {
-      updateAllPlazasDeseadas();
-      return true;
+      try {
+        // Actualizar localmente
+        updateAllPlazasDeseadas();
+        
+        // Actualizar en Supabase
+        const { error } = await supabase
+          .from('aspirantes')
+          .update({ plazaDeseada: null })
+          .neq('cedula', 'admin');
+        
+        if (error) {
+          console.error('Error clearing selections in Supabase:', error);
+          return false;
+        }
+        
+        return true;
+      } catch (error) {
+        console.error('Error in clearAllSelections:', error);
+        return false;
+      }
     }
     return false;
   };

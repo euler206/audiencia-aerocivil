@@ -22,6 +22,16 @@ const ClearSelectionsDialog: React.FC<ClearSelectionsDialogProps> = ({
   onOpenChange,
   onConfirm
 }) => {
+  const handleConfirm = async () => {
+    try {
+      await onConfirm();
+      toast.success('Todas las selecciones han sido borradas exitosamente');
+    } catch (error) {
+      toast.error('Error al borrar las selecciones');
+      console.error('Error:', error);
+    }
+  };
+
   return (
     <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
       <AlertDialogContent>
@@ -33,7 +43,10 @@ const ClearSelectionsDialog: React.FC<ClearSelectionsDialogProps> = ({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm} className="bg-destructive text-destructive-foreground">
+          <AlertDialogAction 
+            onClick={handleConfirm} 
+            className="bg-destructive text-destructive-foreground"
+          >
             Confirmar
           </AlertDialogAction>
         </AlertDialogFooter>
