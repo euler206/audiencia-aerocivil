@@ -19,6 +19,7 @@ export const updatePlazaDeseada = async (cedula: string, plaza: string): Promise
   
   // Try to update in Supabase
   try {
+    console.log(`Actualizando aspirante ${cedula} con plaza ${plaza} en Supabase`);
     const { error } = await supabase
       .from('aspirantes')
       .update({ plaza_deseada: plaza })
@@ -26,6 +27,8 @@ export const updatePlazaDeseada = async (cedula: string, plaza: string): Promise
       
     if (error) {
       console.error(`Error al actualizar aspirante ${cedula} en Supabase:`, error);
+    } else {
+      console.log(`Aspirante ${cedula} actualizado correctamente en Supabase`);
     }
   } catch (error) {
     console.error("Error al actualizar en Supabase:", error);
@@ -69,6 +72,16 @@ export const updatePlazaDeseada = async (cedula: string, plaza: string): Promise
               const plazaAnteriorOtroAspirante = otroAspirante.plazaDeseada;
               aspirantes[index].plazaDeseada = antiguaPlaza;
               
+              // Actualizar en Supabase
+              try {
+                await supabase
+                  .from('aspirantes')
+                  .update({ plaza_deseada: antiguaPlaza })
+                  .eq('cedula', otroAspirante.cedula);
+              } catch (error) {
+                console.error(`Error al actualizar aspirante ${otroAspirante.cedula} en Supabase:`, error);
+              }
+              
               // Si este aspirante tenía una plaza, verificar si alguien más puede tomarla ahora
               if (plazaAnteriorOtroAspirante) {
                 // Llamada recursiva para continuar la cadena de reasignaciones
@@ -95,6 +108,8 @@ export const updatePlazaDeseada = async (cedula: string, plaza: string): Promise
 
 // Función para limpiar todas las plazas deseadas
 export const updateAllPlazasDeseadas = async (): Promise<boolean> => {
+  console.log("Limpiando todas las plazas deseadas");
+  
   // Limpiar la plaza deseada de todos los aspirantes
   aspirantes.forEach(aspirante => {
     aspirante.plazaDeseada = '';
@@ -107,15 +122,19 @@ export const updateAllPlazasDeseadas = async (): Promise<boolean> => {
   
   // Try to update all in Supabase
   try {
+    console.log("Limpiando plazas en Supabase");
     const { error } = await supabase
       .from('aspirantes')
       .update({ plaza_deseada: null });
       
     if (error) {
       console.error("Error al limpiar plazas en Supabase:", error);
+    } else {
+      console.log("Plazas limpiadas correctamente en Supabase");
     }
     
     // Also clear prioridades table
+    console.log("Limpiando prioridades en Supabase");
     const { error: prioridadesError } = await supabase
       .from('prioridades')
       .delete()
@@ -123,6 +142,8 @@ export const updateAllPlazasDeseadas = async (): Promise<boolean> => {
       
     if (prioridadesError) {
       console.error("Error al limpiar prioridades en Supabase:", prioridadesError);
+    } else {
+      console.log("Prioridades limpiadas correctamente en Supabase");
     }
   } catch (error) {
     console.error("Error al actualizar en Supabase:", error);

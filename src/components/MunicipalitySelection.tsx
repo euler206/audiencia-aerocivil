@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
@@ -13,6 +14,7 @@ import { FileText } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface PriorityMunicipality {
   departamento: string;
@@ -23,11 +25,20 @@ interface PriorityMunicipality {
 
 const MunicipalitySelection: React.FC = () => {
   const { cedula } = useParams<{ cedula: string }>();
+  const { verifyIdentity } = useAuth();
   const navigate = useNavigate();
   const [municipalitiesWithPriority, setMunicipalitiesWithPriority] = useState<PriorityMunicipality[]>([]);
   const [aspirantePuesto, setAspirantePuesto] = useState(0);
   const [maxPrioridades, setMaxPrioridades] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Verificar que el usuario tenga acceso a esta página
+  useEffect(() => {
+    if (cedula && !verifyIdentity(cedula)) {
+      toast.error("No tienes permiso para acceder a esta página");
+      navigate('/dashboard');
+    }
+  }, [cedula, navigate, verifyIdentity]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -50,6 +61,7 @@ const MunicipalitySelection: React.FC = () => {
             .eq('aspirante_id', cedula);
           
           if (!error && prioridadesData && prioridadesData.length > 0) {
+            console.log("Prioridades cargadas desde Supabase:", prioridadesData);
             // Si hay datos en Supabase, usarlos
             prioridadesData.forEach(p => {
               const index = municipalitiesWithPriority.findIndex(m => m.municipio === p.municipio);
@@ -59,6 +71,7 @@ const MunicipalitySelection: React.FC = () => {
             });
           } 
           else {
+            console.log("No se encontraron prioridades en Supabase, buscando en localStorage");
             // Fallback a localStorage
             const prioridadesString = localStorage.getItem(`prioridades_${cedula}`);
             if (prioridadesString) {
@@ -99,7 +112,7 @@ const MunicipalitySelection: React.FC = () => {
     };
     
     loadData();
-  }, [cedula]);
+  }, [cedula, verifyIdentity]);
 
   const handleSetPriority = (municipio: string) => {
     setMunicipalitiesWithPriority(prev => {
@@ -137,10 +150,15 @@ const MunicipalitySelection: React.FC = () => {
       // Guardar en Supabase
       try {
         // First delete existing priorities
-        await supabase
+        const { error: deleteError } = await supabase
           .from('prioridades')
           .delete()
           .eq('aspirante_id', cedula);
+        
+        if (deleteError) {
+          console.error("Error al eliminar prioridades existentes:", deleteError);
+          toast.error("Error al eliminar prioridades existentes");
+        }
         
         // Then insert new ones
         const prioridadesSupabase = priorities.map(p => ({
@@ -149,15 +167,21 @@ const MunicipalitySelection: React.FC = () => {
           prioridad: p.prioridad
         }));
         
+        console.log("Guardando prioridades en Supabase:", prioridadesSupabase);
+        
         const { error } = await supabase
           .from('prioridades')
           .insert(prioridadesSupabase);
         
         if (error) {
           console.error("Error al guardar prioridades en Supabase:", error);
+          toast.error("Error al guardar prioridades en la base de datos");
+        } else {
+          console.log("Prioridades guardadas exitosamente en Supabase");
         }
       } catch (error) {
         console.error("Error al interactuar con Supabase:", error);
+        toast.error("Error al interactuar con la base de datos");
       }
     }
     
