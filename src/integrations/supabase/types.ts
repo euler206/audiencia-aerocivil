@@ -9,7 +9,98 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      aspirantes: {
+        Row: {
+          cedula: string
+          id: number
+          nombre: string
+          plaza_deseada: string | null
+          puesto: number
+          puntaje: number
+        }
+        Insert: {
+          cedula: string
+          id?: number
+          nombre: string
+          plaza_deseada?: string | null
+          puesto: number
+          puntaje: number
+        }
+        Update: {
+          cedula?: string
+          id?: number
+          nombre?: string
+          plaza_deseada?: string | null
+          puesto?: number
+          puntaje?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aspirantes_plaza_deseada_fkey"
+            columns: ["plaza_deseada"]
+            isOneToOne: false
+            referencedRelation: "plazas"
+            referencedColumns: ["municipio"]
+          },
+        ]
+      }
+      plazas: {
+        Row: {
+          departamento: string
+          id: number
+          municipio: string
+          vacantes: number
+        }
+        Insert: {
+          departamento: string
+          id?: number
+          municipio: string
+          vacantes?: number
+        }
+        Update: {
+          departamento?: string
+          id?: number
+          municipio?: string
+          vacantes?: number
+        }
+        Relationships: []
+      }
+      prioridades: {
+        Row: {
+          aspirante_id: string | null
+          id: number
+          municipio: string | null
+          prioridad: number
+        }
+        Insert: {
+          aspirante_id?: string | null
+          id?: number
+          municipio?: string | null
+          prioridad: number
+        }
+        Update: {
+          aspirante_id?: string | null
+          id?: number
+          municipio?: string | null
+          prioridad?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prioridades_aspirante_id_fkey"
+            columns: ["aspirante_id"]
+            isOneToOne: false
+            referencedRelation: "aspirantes"
+            referencedColumns: ["cedula"]
+          },
+          {
+            foreignKeyName: "prioridades_municipio_fkey"
+            columns: ["municipio"]
+            isOneToOne: false
+            referencedRelation: "plazas"
+            referencedColumns: ["municipio"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

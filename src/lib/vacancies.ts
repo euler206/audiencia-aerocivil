@@ -3,9 +3,10 @@ import { aspirantes } from './aspirantes';
 import { saveToLocalStorage } from './storage';
 import { cascadePlazaUpdates, reasignarSiguientePrioridad } from './prioridades';
 import { plazas } from './plazas';
+import { supabase } from '@/integrations/supabase/client';
 
 // Update aspirante's plaza deseada and handle cascading changes
-export const updatePlazaDeseada = (cedula: string, plaza: string): boolean => {
+export const updatePlazaDeseada = async (cedula: string, plaza: string): Promise<boolean> => {
   // Encontrar el aspirante actual
   const aspiranteIndex = aspirantes.findIndex(a => a.cedula === cedula);
   if (aspiranteIndex < 0) return false;
@@ -15,6 +16,20 @@ export const updatePlazaDeseada = (cedula: string, plaza: string): boolean => {
   
   // Actualizar la plaza del aspirante actual
   aspirantes[aspiranteIndex].plazaDeseada = plaza;
+  
+  // Try to update in Supabase
+  try {
+    const { error } = await supabase
+      .from('aspirantes')
+      .update({ plaza_deseada: plaza })
+      .eq('cedula', cedula);
+      
+    if (error) {
+      console.error(`Error al actualizar aspirante ${cedula} en Supabase:`, error);
+    }
+  } catch (error) {
+    console.error("Error al actualizar en Supabase:", error);
+  }
   
   // Si ya existía una selección previa y es diferente, verificar si se liberó una plaza
   if (antiguaPlaza !== plaza) {
@@ -79,7 +94,7 @@ export const updatePlazaDeseada = (cedula: string, plaza: string): boolean => {
 };
 
 // Función para limpiar todas las plazas deseadas
-export const updateAllPlazasDeseadas = (): boolean => {
+export const updateAllPlazasDeseadas = async (): Promise<boolean> => {
   // Limpiar la plaza deseada de todos los aspirantes
   aspirantes.forEach(aspirante => {
     aspirante.plazaDeseada = '';
@@ -89,6 +104,29 @@ export const updateAllPlazasDeseadas = (): boolean => {
   aspirantes.forEach(aspirante => {
     localStorage.removeItem(`prioridades_${aspirante.cedula}`);
   });
+  
+  // Try to update all in Supabase
+  try {
+    const { error } = await supabase
+      .from('aspirantes')
+      .update({ plaza_deseada: null });
+      
+    if (error) {
+      console.error("Error al limpiar plazas en Supabase:", error);
+    }
+    
+    // Also clear prioridades table
+    const { error: prioridadesError } = await supabase
+      .from('prioridades')
+      .delete()
+      .neq('id', 0);
+      
+    if (prioridadesError) {
+      console.error("Error al limpiar prioridades en Supabase:", prioridadesError);
+    }
+  } catch (error) {
+    console.error("Error al actualizar en Supabase:", error);
+  }
   
   // Guardar los cambios en localStorage
   saveToLocalStorage();

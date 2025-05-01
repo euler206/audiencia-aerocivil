@@ -1,8 +1,9 @@
 
 import { Aspirante } from './types';
 import { plazas } from './plazas';
+import { supabase } from '@/integrations/supabase/client';
 
-// Datos iniciales de aspirantes
+// Datos iniciales de aspirantes (fallback data)
 export const aspirantes: Aspirante[] = [
   { puesto: 1, puntaje: 88.18, cedula: "1082982133", nombre: "DORIS MARIA JIMENEZ OROZCO", plazaDeseada: "" },
   { puesto: 2, puntaje: 85.21, cedula: "1085286283", nombre: "ESTEBAN MAURICIO HERRERA DIAZ", plazaDeseada: "" },
@@ -111,7 +112,7 @@ export const aspirantes: Aspirante[] = [
 ];
 
 // Helper function to get user from cedula
-export const getAspiranteByCredentials = (cedula: string, opec: string): Aspirante | undefined => {
+export const getAspiranteByCredentials = async (cedula: string, opec: string): Promise<Aspirante | undefined> => {
   // Verify OPEC number
   if (opec !== "209961") {
     return undefined;
@@ -119,16 +120,54 @@ export const getAspiranteByCredentials = (cedula: string, opec: string): Aspiran
   
   console.log("Buscando aspirante con cédula:", cedula);
   
-  // Find user by cedula - asegurando que la comparación sea como string
-  const foundAspirante = aspirantes.find(aspirante => {
-    const aspiranteCedula = String(aspirante.cedula).trim();
-    const searchCedula = String(cedula).trim();
-    const match = aspiranteCedula === searchCedula;
-    console.log(`Comparando: "${aspiranteCedula}" === "${searchCedula}" => ${match}`);
-    return match;
-  });
-  
-  console.log("Aspirante encontrado:", foundAspirante);
-  
-  return foundAspirante;
+  try {
+    // Try to fetch from Supabase
+    const { data: supabaseAspirante, error } = await supabase
+      .from('aspirantes')
+      .select('*')
+      .eq('cedula', cedula)
+      .single();
+    
+    if (error) {
+      console.error("Error al buscar aspirante en Supabase:", error);
+      
+      // Fallback to local data if Supabase fails
+      const localAspirante = aspirantes.find(aspirante => {
+        const aspiranteCedula = String(aspirante.cedula).trim();
+        const searchCedula = String(cedula).trim();
+        return aspiranteCedula === searchCedula;
+      });
+      
+      console.log("Aspirante encontrado en datos locales:", localAspirante);
+      return localAspirante;
+    }
+    
+    if (supabaseAspirante) {
+      // Convert from Supabase format to our app format
+      const formattedAspirante: Aspirante = {
+        puesto: supabaseAspirante.puesto,
+        puntaje: supabaseAspirante.puntaje,
+        cedula: supabaseAspirante.cedula,
+        nombre: supabaseAspirante.nombre,
+        plazaDeseada: supabaseAspirante.plaza_deseada || ""
+      };
+      
+      console.log("Aspirante encontrado en Supabase:", formattedAspirante);
+      return formattedAspirante;
+    }
+    
+    return undefined;
+  } catch (error) {
+    console.error("Error general al buscar aspirante:", error);
+    
+    // Fallback to local data as last resort
+    const localAspirante = aspirantes.find(aspirante => {
+      const aspiranteCedula = String(aspirante.cedula).trim();
+      const searchCedula = String(cedula).trim();
+      return aspiranteCedula === searchCedula;
+    });
+    
+    console.log("Aspirante encontrado en datos locales (fallback):", localAspirante);
+    return localAspirante;
+  }
 };

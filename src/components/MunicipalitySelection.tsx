@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
@@ -12,8 +11,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { FileText } from 'lucide-react';
 import jsPDF from 'jspdf';
-import { jsPDF as jsPDFType } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PriorityMunicipality {
   departamento: string;
@@ -28,37 +27,78 @@ const MunicipalitySelection: React.FC = () => {
   const [municipalitiesWithPriority, setMunicipalitiesWithPriority] = useState<PriorityMunicipality[]>([]);
   const [aspirantePuesto, setAspirantePuesto] = useState(0);
   const [maxPrioridades, setMaxPrioridades] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const aspirante = aspirantes.find(a => a.cedula === cedula);
-    if (aspirante) {
-      setAspirantePuesto(aspirante.puesto);
-      setMaxPrioridades(aspirante.puesto);
-      
-      const municipalitiesWithPriority = plazas.map(plaza => ({
-        ...plaza,
-        prioridad: 0
-      }));
+    const loadData = async () => {
+      setIsLoading(true);
+      const aspirante = aspirantes.find(a => a.cedula === cedula);
+      if (aspirante) {
+        setAspirantePuesto(aspirante.puesto);
+        setMaxPrioridades(aspirante.puesto);
+        
+        const municipalitiesWithPriority = plazas.map(plaza => ({
+          ...plaza,
+          prioridad: 0
+        }));
 
-      const prioridadesString = localStorage.getItem(`prioridades_${cedula}`);
-      if (prioridadesString) {
-        const prioridades = JSON.parse(prioridadesString);
-        prioridades.forEach((p: { municipio: string, prioridad: number }) => {
-          const index = municipalitiesWithPriority.findIndex(m => m.municipio === p.municipio);
-          if (index >= 0) {
-            municipalitiesWithPriority[index].prioridad = p.prioridad;
+        try {
+          // Intentar cargar prioridades de Supabase
+          const { data: prioridadesData, error } = await supabase
+            .from('prioridades')
+            .select('*')
+            .eq('aspirante_id', cedula);
+          
+          if (!error && prioridadesData && prioridadesData.length > 0) {
+            // Si hay datos en Supabase, usarlos
+            prioridadesData.forEach(p => {
+              const index = municipalitiesWithPriority.findIndex(m => m.municipio === p.municipio);
+              if (index >= 0) {
+                municipalitiesWithPriority[index].prioridad = p.prioridad;
+              }
+            });
+          } 
+          else {
+            // Fallback a localStorage
+            const prioridadesString = localStorage.getItem(`prioridades_${cedula}`);
+            if (prioridadesString) {
+              const prioridades = JSON.parse(prioridadesString);
+              prioridades.forEach((p: { municipio: string, prioridad: number }) => {
+                const index = municipalitiesWithPriority.findIndex(m => m.municipio === p.municipio);
+                if (index >= 0) {
+                  municipalitiesWithPriority[index].prioridad = p.prioridad;
+                }
+              });
+            } 
+            else if (aspirante.plazaDeseada) {
+              const index = municipalitiesWithPriority.findIndex(m => m.municipio === aspirante.plazaDeseada);
+              if (index >= 0) {
+                municipalitiesWithPriority[index].prioridad = 1;
+              }
+            }
           }
-        });
-      } 
-      else if (aspirante.plazaDeseada) {
-        const index = municipalitiesWithPriority.findIndex(m => m.municipio === aspirante.plazaDeseada);
-        if (index >= 0) {
-          municipalitiesWithPriority[index].prioridad = 1;
+        } catch (error) {
+          console.error("Error al cargar prioridades:", error);
+          
+          // Fallback a localStorage en caso de error
+          const prioridadesString = localStorage.getItem(`prioridades_${cedula}`);
+          if (prioridadesString) {
+            const prioridades = JSON.parse(prioridadesString);
+            prioridades.forEach((p: { municipio: string, prioridad: number }) => {
+              const index = municipalitiesWithPriority.findIndex(m => m.municipio === p.municipio);
+              if (index >= 0) {
+                municipalitiesWithPriority[index].prioridad = p.prioridad;
+              }
+            });
+          }
         }
+        
+        setMunicipalitiesWithPriority(municipalitiesWithPriority);
       }
-      
-      setMunicipalitiesWithPriority(municipalitiesWithPriority);
-    }
+      setIsLoading(false);
+    };
+    
+    loadData();
   }, [cedula]);
 
   const handleSetPriority = (municipio: string) => {
@@ -80,7 +120,7 @@ const MunicipalitySelection: React.FC = () => {
     });
   };
 
-  const handleSaveSelection = () => {
+  const handleSaveSelection = async () => {
     const priorities = municipalitiesWithPriority
       .filter(item => item.prioridad > 0)
       .map(item => ({ municipio: item.municipio, prioridad: item.prioridad }));
@@ -91,7 +131,34 @@ const MunicipalitySelection: React.FC = () => {
     }
     
     if (cedula) {
+      // Guardar en localStorage como fallback
       localStorage.setItem(`prioridades_${cedula}`, JSON.stringify(priorities));
+      
+      // Guardar en Supabase
+      try {
+        // First delete existing priorities
+        await supabase
+          .from('prioridades')
+          .delete()
+          .eq('aspirante_id', cedula);
+        
+        // Then insert new ones
+        const prioridadesSupabase = priorities.map(p => ({
+          aspirante_id: cedula,
+          municipio: p.municipio,
+          prioridad: p.prioridad
+        }));
+        
+        const { error } = await supabase
+          .from('prioridades')
+          .insert(prioridadesSupabase);
+        
+        if (error) {
+          console.error("Error al guardar prioridades en Supabase:", error);
+        }
+      } catch (error) {
+        console.error("Error al interactuar con Supabase:", error);
+      }
     }
     
     const selectedPlaza = getAvailablePlazaByPriority(priorities, aspirantePuesto);
@@ -102,7 +169,7 @@ const MunicipalitySelection: React.FC = () => {
     }
     
     if (cedula) {
-      const success = updatePlazaDeseada(cedula, selectedPlaza);
+      const success = await updatePlazaDeseada(cedula, selectedPlaza);
       
       if (success) {
         toast.success(`Plaza asignada: ${selectedPlaza}`);
@@ -185,6 +252,17 @@ const MunicipalitySelection: React.FC = () => {
       toast.error(`Error al generar el PDF: ${errorMessage}`);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-6 flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="mb-4 text-aeronautica">Cargando plazas...</div>
+          <div className="animate-spin h-8 w-8 border-4 border-aeronautica border-t-transparent rounded-full mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-6">

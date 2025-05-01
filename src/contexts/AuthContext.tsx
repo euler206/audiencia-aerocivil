@@ -1,119 +1,107 @@
-
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useNavigate } from 'react';
 import { getAspiranteByCredentials, Aspirante, initializeStorage, updateAllPlazasDeseadas } from '@/lib';
 
 interface AuthContextType {
-  currentUser: Aspirante | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
   login: (cedula: string, opec: string) => Promise<boolean>;
   logout: () => void;
-  verifyIdentity: (cedula: string) => boolean;
+  userId: string | null;
   clearAllSelections: () => boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType>({
+  isAuthenticated: false,
+  isAdmin: false,
+  login: async () => false,
+  logout: () => {},
+  userId: null,
+  clearAllSelections: () => false,
+});
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<Aspirante | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const navigate = useNavigate();
 
+  // Initialize storage when app loads
   useEffect(() => {
-    // Initialize data storage
     initializeStorage();
     
-    // Check for existing auth session
-    const savedUser = localStorage.getItem('currentUser');
-    const savedIsAdmin = localStorage.getItem('isAdmin') === 'true';
+    // Check for existing session
+    const checkSession = async () => {
+      const storedCedula = localStorage.getItem('user_cedula');
+      if (storedCedula) {
+        setIsAuthenticated(true);
+        setUserId(storedCedula);
+        
+        // Check if admin
+        if (storedCedula === '1082982133') {
+          setIsAdmin(true);
+        }
+      }
+    };
     
-    if (savedUser) {
-      setCurrentUser(JSON.parse(savedUser));
-      setIsAuthenticated(true);
-      setIsAdmin(savedIsAdmin);
-    }
+    checkSession();
   }, []);
 
   const login = async (cedula: string, opec: string): Promise<boolean> => {
-    // Verificar si es el usuario administrador
-    if (cedula === 'admin' && opec === '87453609') {
-      const adminUser: Aspirante = {
-        puesto: 0,
-        puntaje: 100,
-        cedula: 'admin',
-        nombre: 'Administrador',
-        plazaDeseada: ''
-      };
+    try {
+      const foundAspirante = await getAspiranteByCredentials(cedula, opec);
       
-      setCurrentUser(adminUser);
-      setIsAuthenticated(true);
-      setIsAdmin(true);
-      localStorage.setItem('currentUser', JSON.stringify(adminUser));
-      localStorage.setItem('isAdmin', 'true');
-      return true;
+      if (foundAspirante) {
+        setIsAuthenticated(true);
+        setUserId(cedula);
+        
+        // Special admin user
+        if (cedula === '1082982133') {
+          setIsAdmin(true);
+        }
+        
+        // Store credentials in localStorage
+        localStorage.setItem('user_cedula', cedula);
+        
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
     }
-    
-    // Si no es administrador, verificar credenciales normales
-    const cedulaString = String(cedula).trim();
-    const opecString = String(opec).trim();
-    
-    const user = getAspiranteByCredentials(cedulaString, opecString);
-    
-    if (user) {
-      setCurrentUser(user);
-      setIsAuthenticated(true);
-      setIsAdmin(false);
-      localStorage.setItem('currentUser', JSON.stringify(user));
-      localStorage.setItem('isAdmin', 'false');
-      return true;
-    }
-    
-    return false;
   };
 
   const logout = () => {
-    setCurrentUser(null);
     setIsAuthenticated(false);
     setIsAdmin(false);
-    localStorage.removeItem('currentUser');
-    localStorage.removeItem('isAdmin');
+    setUserId(null);
+    localStorage.removeItem('user_cedula');
+    navigate('/');
   };
 
-  const verifyIdentity = (cedula: string): boolean => {
-    if (isAdmin) {
-      return true; // El administrador puede ver cualquier información
-    }
-    return currentUser?.cedula === cedula;
-  };
-
-  // Nueva función para limpiar todas las selecciones de plazas
   const clearAllSelections = (): boolean => {
-    if (!isAdmin) {
-      return false; // Solo el administrador puede realizar esta acción
+    if (isAdmin) {
+      updateAllPlazasDeseadas();
+      return true;
     }
-    
-    return updateAllPlazasDeseadas();
+    return false;
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      currentUser, 
-      isAuthenticated, 
-      isAdmin, 
-      login, 
-      logout, 
-      verifyIdentity,
-      clearAllSelections
-    }}>
+    <AuthContext.Provider 
+      value={{ 
+        isAuthenticated, 
+        isAdmin, 
+        login, 
+        logout,
+        userId,
+        clearAllSelections
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+export const useAuth = () => useContext(AuthContext);
