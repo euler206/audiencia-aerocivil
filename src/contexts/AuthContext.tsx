@@ -1,4 +1,6 @@
-import React, { createContext, useState, useContext, useEffect, useNavigate } from 'react';
+
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getAspiranteByCredentials, Aspirante, initializeStorage, updateAllPlazasDeseadas } from '@/lib';
 
 interface AuthContextType {
@@ -7,7 +9,9 @@ interface AuthContextType {
   login: (cedula: string, opec: string) => Promise<boolean>;
   logout: () => void;
   userId: string | null;
+  currentUser: Aspirante | null;
   clearAllSelections: () => boolean;
+  verifyIdentity: (cedula: string) => boolean;
 }
 
 export const AuthContext = createContext<AuthContextType>({
@@ -16,13 +20,16 @@ export const AuthContext = createContext<AuthContextType>({
   login: async () => false,
   logout: () => {},
   userId: null,
+  currentUser: null,
   clearAllSelections: () => false,
+  verifyIdentity: () => false,
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<Aspirante | null>(null);
   const navigate = useNavigate();
 
   // Initialize storage when app loads
@@ -40,6 +47,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (storedCedula === '1082982133') {
           setIsAdmin(true);
         }
+
+        // Set current user
+        try {
+          const aspirante = await getAspiranteByCredentials(storedCedula, '');
+          if (aspirante) {
+            setCurrentUser(aspirante);
+          }
+        } catch (error) {
+          console.error('Error loading current user:', error);
+        }
       }
     };
     
@@ -53,6 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (foundAspirante) {
         setIsAuthenticated(true);
         setUserId(cedula);
+        setCurrentUser(foundAspirante);
         
         // Special admin user
         if (cedula === '1082982133') {
@@ -76,6 +94,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsAuthenticated(false);
     setIsAdmin(false);
     setUserId(null);
+    setCurrentUser(null);
     localStorage.removeItem('user_cedula');
     navigate('/');
   };
@@ -88,6 +107,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return false;
   };
 
+  const verifyIdentity = (cedula: string): boolean => {
+    // Verificar identidad del aspirante
+    return isAuthenticated && (isAdmin || userId === cedula);
+  };
+
   return (
     <AuthContext.Provider 
       value={{ 
@@ -96,7 +120,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login, 
         logout,
         userId,
-        clearAllSelections
+        currentUser,
+        clearAllSelections,
+        verifyIdentity
       }}
     >
       {children}
