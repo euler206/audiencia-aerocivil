@@ -11,26 +11,38 @@ import VacancyPage from "./pages/VacancyPage";
 import MunicipalityPage from "./pages/MunicipalityPage";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+// Crear el cliente de consulta fuera del componente para evitar recreaciones
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/select-vacancy/:cedula" element={<VacancyPage />} />
-            <Route path="/municipality-selection/:cedula" element={<MunicipalityPage />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  console.log("Aplicación iniciada");
+  
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/select-vacancy/:cedula" element={<VacancyPage />} />
+              <Route path="/municipality-selection/:cedula" element={<MunicipalityPage />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Header from '@/components/Header';
 import CandidateList from '@/components/CandidateList';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,7 +8,13 @@ import { Navigate } from 'react-router-dom';
 const Dashboard: React.FC = () => {
   const { isAuthenticated } = useAuth();
 
+  useEffect(() => {
+    // Añadir un log para depuración
+    console.log("Dashboard renderizado, estado de autenticación:", isAuthenticated);
+  }, [isAuthenticated]);
+
   if (!isAuthenticated) {
+    console.log("No autenticado, redirigiendo a página principal");
     return <Navigate to="/" replace />;
   }
 

@@ -29,6 +29,7 @@ const LoginForm: React.FC = () => {
       
       if (success) {
         toast.success('Inicio de sesión exitoso');
+        console.log("Redirigiendo al dashboard tras login exitoso");
         navigate('/dashboard');
       } else {
         toast.error('Credenciales inválidas. Verifique su número de cédula y OPEC.');

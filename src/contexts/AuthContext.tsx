@@ -35,29 +35,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Initialize storage when app loads
   useEffect(() => {
+    console.log("AuthProvider inicializando...");
     initializeStorage();
     
     // Check for existing session
     const checkSession = async () => {
       const storedCedula = localStorage.getItem('user_cedula');
+      console.log("Cédula almacenada:", storedCedula);
+      
       if (storedCedula) {
         setIsAuthenticated(true);
         setUserId(storedCedula);
         
-        // Check if admin (corregido para incluir ambos ID de administrador)
+        // Check if admin
         if (storedCedula === 'admin') {
+          console.log("Usuario detectado como administrador");
           setIsAdmin(true);
         }
 
         // Set current user
         try {
-          const aspirante = await getAspiranteByCredentials(storedCedula, '');
-          if (aspirante) {
-            setCurrentUser(aspirante);
+          if (storedCedula !== 'admin') {
+            const aspirante = await getAspiranteByCredentials(storedCedula, '');
+            if (aspirante) {
+              console.log("Aspirante cargado:", aspirante);
+              setCurrentUser(aspirante);
+            } else {
+              console.log("No se encontró información del aspirante");
+            }
           }
         } catch (error) {
           console.error('Error loading current user:', error);
         }
+      } else {
+        console.log("No hay sesión almacenada");
       }
     };
     
@@ -66,8 +77,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (cedula: string, opec: string): Promise<boolean> => {
     try {
+      console.log("Intentando iniciar sesión con:", cedula, opec);
+      
       // Caso especial para el admin
       if (cedula === 'admin' && opec === '87453609') {
+        console.log("Login de administrador exitoso");
         setIsAuthenticated(true);
         setIsAdmin(true);
         setUserId('admin');
@@ -78,6 +92,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const foundAspirante = await getAspiranteByCredentials(cedula, opec);
       
       if (foundAspirante) {
+        console.log("Login exitoso para aspirante:", foundAspirante);
         setIsAuthenticated(true);
         setUserId(cedula);
         setCurrentUser(foundAspirante);
@@ -88,6 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return true;
       }
       
+      console.log("Credenciales inválidas");
       return false;
     } catch (error) {
       console.error('Login error:', error);
@@ -96,6 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    console.log("Cerrando sesión");
     setIsAuthenticated(false);
     setIsAdmin(false);
     setUserId(null);
@@ -151,7 +168,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const verifyIdentity = (cedula: string): boolean => {
     // Verificar identidad del aspirante
-    return isAuthenticated && (isAdmin || userId === cedula);
+    const result = isAuthenticated && (isAdmin || userId === cedula);
+    console.log("Verificando identidad:", { cedula, userId, isAdmin, resultado: result });
+    return result;
   };
 
   return (
