@@ -1,18 +1,25 @@
 
 import { aspirantes } from './aspirantes';
 import { saveToLocalStorage } from './storage';
-import { cascadePlazaUpdates, reasignarSiguientePrioridad } from './prioridades';
+import { cascadePlazaUpdates, reasignarSiguientePrioridad, verificarAspirantesInteresados } from './prioridades';
 import { plazas } from './plazas';
 import { supabase } from '@/integrations/supabase/client';
 
 // Update aspirante's plaza deseada and handle cascading changes
 export const updatePlazaDeseada = async (cedula: string, plaza: string): Promise<boolean> => {
+  console.log(`Iniciando actualización de plaza para aspirante ${cedula} a ${plaza}`);
+  
   // Encontrar el aspirante actual
   const aspiranteIndex = aspirantes.findIndex(a => a.cedula === cedula);
-  if (aspiranteIndex < 0) return false;
+  if (aspiranteIndex < 0) {
+    console.error(`No se encontró el aspirante con cédula ${cedula}`);
+    return false;
+  }
   
   const aspirante = aspirantes[aspiranteIndex];
   const antiguaPlaza = aspirante.plazaDeseada;
+  
+  console.log(`Aspirante ${cedula} (puesto ${aspirante.puesto}): cambiando de ${antiguaPlaza || 'ninguna'} a ${plaza || 'ninguna'}`);
   
   // Actualizar la plaza del aspirante actual
   aspirantes[aspiranteIndex].plazaDeseada = plaza;
@@ -36,73 +43,22 @@ export const updatePlazaDeseada = async (cedula: string, plaza: string): Promise
   
   // Si ya existía una selección previa y es diferente, verificar si se liberó una plaza
   if (antiguaPlaza !== plaza) {
+    console.log(`Cambio de plaza detectado: de ${antiguaPlaza || 'ninguna'} a ${plaza || 'ninguna'}`);
+    
     // Si había una plaza anterior, verificar si alguien más puede tomarla ahora
     if (antiguaPlaza !== '') {
-      // Buscar aspirantes que podrían preferir esta plaza que fue liberada
-      // Ordenarlos por puesto para darle prioridad al mejor posicionado
-      const aspirantesAVerificar = [...aspirantes]
-        .filter(a => a.cedula !== cedula) // Excluir al aspirante actual
-        .sort((a, b) => a.puesto - b.puesto); // Ordenar por puesto (ascendente)
-      
-      // Verificar si algún aspirante tiene esta plaza como prioritaria
-      for (const otroAspirante of aspirantesAVerificar) {
-        // Verificar si tiene prioridades guardadas
-        const prioridadesString = localStorage.getItem(`prioridades_${otroAspirante.cedula}`);
-        if (!prioridadesString) continue;
-        
-        const prioridades = JSON.parse(prioridadesString);
-        // Buscar si la plaza liberada está en sus prioridades y con mayor prioridad que su plaza actual
-        const plazaPrioritaria = prioridades.find(
-          (p: { municipio: string }) => p.municipio === antiguaPlaza
-        );
-        
-        if (plazaPrioritaria) {
-          // Verificar si esta plaza liberada tiene mayor prioridad que la actual del aspirante
-          const prioridadPlazaActual = prioridades.find(
-            (p: { municipio: string }) => p.municipio === otroAspirante.plazaDeseada
-          );
-          
-          const esMejorPrioridad = !prioridadPlazaActual || 
-            plazaPrioritaria.prioridad < prioridadPlazaActual.prioridad;
-            
-          if (esMejorPrioridad) {
-            // Reasignar al aspirante a la plaza liberada que es de mayor prioridad para él
-            const index = aspirantes.findIndex(a => a.cedula === otroAspirante.cedula);
-            if (index >= 0) {
-              const plazaAnteriorOtroAspirante = otroAspirante.plazaDeseada;
-              aspirantes[index].plazaDeseada = antiguaPlaza;
-              
-              // Actualizar en Supabase
-              try {
-                await supabase
-                  .from('aspirantes')
-                  .update({ plaza_deseada: antiguaPlaza })
-                  .eq('cedula', otroAspirante.cedula);
-              } catch (error) {
-                console.error(`Error al actualizar aspirante ${otroAspirante.cedula} en Supabase:`, error);
-              }
-              
-              // Si este aspirante tenía una plaza, verificar si alguien más puede tomarla ahora
-              if (plazaAnteriorOtroAspirante) {
-                // Llamada recursiva para continuar la cadena de reasignaciones
-                cascadePlazaUpdates(otroAspirante.puesto, antiguaPlaza);
-              }
-              
-              // Solo procesamos un aspirante a la vez para esta plaza liberada
-              break;
-            }
-          }
-        }
-      }
+      console.log(`Plaza liberada: ${antiguaPlaza}. Verificando si otro aspirante la prefiere...`);
+      await verificarAspirantesInteresados(antiguaPlaza);
     }
     
     // Si seleccionó una nueva plaza, realizar actualización en cascada
     if (plaza !== '') {
-      cascadePlazaUpdates(aspirante.puesto, plaza);
+      console.log(`Nueva plaza seleccionada: ${plaza}. Verificando posibles conflictos...`);
+      await cascadePlazaUpdates(aspirante.puesto, plaza);
     }
   }
   
-  saveToLocalStorage();
+  await saveToLocalStorage();
   return true;
 };
 
@@ -111,50 +67,39 @@ export const updateAllPlazasDeseadas = async (): Promise<boolean> => {
   console.log("Limpiando todas las plazas deseadas");
   
   try {
-    // Primero, obtener la lista actualizada de aspirantes desde Supabase
-    const { data: supabaseAspirantes, error } = await supabase
+    // Primero intentar actualizar en Supabase
+    console.log("Actualizando todas las plazas en Supabase a vacío");
+    const { error } = await supabase
       .from('aspirantes')
-      .select('*');
+      .update({ plaza_deseada: null })
+      .neq('cedula', 'no-existe'); // Esto afecta a todos los registros
       
     if (error) {
-      console.error("Error al obtener aspirantes de Supabase:", error);
+      console.error("Error al actualizar aspirantes en Supabase:", error);
       return false;
     }
     
-    console.log(`Datos recibidos de Supabase: ${supabaseAspirantes ? supabaseAspirantes.length : 0} aspirantes`);
+    console.log("Actualización en Supabase completada correctamente");
     
-    // Actualizar los aspirantes locales con los datos de Supabase
-    if (supabaseAspirantes) {
-      // Mapear datos de Supabase a formato local
-      for (let i = 0; i < aspirantes.length; i++) {
-        const supabaseAspirante = supabaseAspirantes.find(a => a.cedula === aspirantes[i].cedula);
-        if (supabaseAspirante) {
-          aspirantes[i].plazaDeseada = supabaseAspirante.plaza_deseada || '';
-          console.log(`Aspirante ${aspirantes[i].cedula} actualizado con plaza: ${aspirantes[i].plazaDeseada}`);
-        } else {
-          aspirantes[i].plazaDeseada = '';
-          console.log(`No se encontró el aspirante ${aspirantes[i].cedula} en Supabase, limpiando su plaza`);
-        }
-      }
-    } else {
-      // Si no hay datos de Supabase, limpiar localmente
-      console.log("No se recibieron datos de Supabase, limpiando todas las plazas localmente");
-      aspirantes.forEach(aspirante => {
-        aspirante.plazaDeseada = '';
-      });
+    // Actualizar localmente
+    console.log("Actualizando aspirantes locales");
+    for (let i = 0; i < aspirantes.length; i++) {
+      aspirantes[i].plazaDeseada = '';
     }
+    
+    // Limpiar todas las prioridades guardadas en localStorage
+    console.log("Limpiando prioridades en localStorage");
+    aspirantes.forEach(aspirante => {
+      localStorage.removeItem(`prioridades_${aspirante.cedula}`);
+    });
+    
+    // Guardar los cambios actualizados en localStorage
+    await saveToLocalStorage();
+    
+    console.log("Proceso de limpieza completado correctamente");
+    return true;
   } catch (error) {
-    console.error("Error al sincronizar con Supabase:", error);
+    console.error("Error durante el proceso de limpieza:", error);
     return false;
   }
-  
-  // Limpiar todas las prioridades guardadas en localStorage
-  aspirantes.forEach(aspirante => {
-    localStorage.removeItem(`prioridades_${aspirante.cedula}`);
-  });
-  
-  // Guardar los cambios actualizados en localStorage
-  saveToLocalStorage();
-  console.log("Proceso de limpieza completado");
-  return true;
 };

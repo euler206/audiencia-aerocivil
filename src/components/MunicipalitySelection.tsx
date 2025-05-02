@@ -46,7 +46,10 @@ const MunicipalitySelection: React.FC = () => {
       const aspirante = aspirantes.find(a => a.cedula === cedula);
       if (aspirante) {
         setAspirantePuesto(aspirante.puesto);
+        // El número máximo de prioridades debe ser igual al puesto del aspirante
+        // Esto permite que los mejores puestos tengan más opciones
         setMaxPrioridades(aspirante.puesto);
+        console.log(`Aspirante ${cedula} en puesto ${aspirante.puesto}, puede seleccionar ${aspirante.puesto} prioridades`);
         
         const municipalitiesWithPriority = plazas.map(plaza => ({
           ...plaza,
@@ -116,20 +119,39 @@ const MunicipalitySelection: React.FC = () => {
 
   const handleSetPriority = (municipio: string) => {
     setMunicipalitiesWithPriority(prev => {
-      const existingPriorities = prev.filter(item => item.prioridad > 0).length;
-      return prev.map(item => {
-        if (item.municipio === municipio) {
-          if (item.prioridad > 0) {
-            return { ...item, prioridad: 0 };
+      // Copiar el estado previo para modificarlo
+      const newState = [...prev];
+      const item = newState.find(item => item.municipio === municipio);
+      
+      if (!item) return prev;
+      
+      // Si ya tiene prioridad, quitársela
+      if (item.prioridad > 0) {
+        // Al quitar una prioridad, debemos reajustar todas las prioridades
+        const oldPriority = item.prioridad;
+        item.prioridad = 0;
+        
+        // Reajustar todas las prioridades mayores que la que quitamos
+        newState.forEach(m => {
+          if (m.prioridad > oldPriority) {
+            m.prioridad -= 1;
           }
-          if (existingPriorities < maxPrioridades) {
-            return { ...item, prioridad: existingPriorities + 1 };
-          }
-          toast.error(`Solo puede seleccionar ${maxPrioridades} prioridades según su puesto`);
-          return item;
-        }
-        return item;
-      });
+        });
+        return newState;
+      }
+      
+      // Si no tiene prioridad, verificar si podemos asignar una nueva
+      const existingPriorities = newState.filter(item => item.prioridad > 0).length;
+      
+      if (existingPriorities < maxPrioridades) {
+        // Asignarle la siguiente prioridad disponible
+        item.prioridad = existingPriorities + 1;
+        return newState;
+      }
+      
+      // Si ya alcanzamos el máximo de prioridades, mostrar mensaje
+      toast.error(`Solo puede seleccionar ${maxPrioridades} prioridades según su puesto`);
+      return prev;
     });
   };
 
@@ -143,9 +165,12 @@ const MunicipalitySelection: React.FC = () => {
       return;
     }
     
+    console.log(`Guardando selección de ${priorities.length} prioridades para aspirante ${cedula}`);
+    
     if (cedula) {
       // Guardar en localStorage como fallback
       localStorage.setItem(`prioridades_${cedula}`, JSON.stringify(priorities));
+      console.log("Prioridades guardadas en localStorage");
       
       // Guardar en Supabase
       try {
@@ -158,6 +183,8 @@ const MunicipalitySelection: React.FC = () => {
         if (deleteError) {
           console.error("Error al eliminar prioridades existentes:", deleteError);
           toast.error("Error al eliminar prioridades existentes");
+        } else {
+          console.log("Prioridades anteriores eliminadas correctamente");
         }
         
         // Then insert new ones
@@ -185,12 +212,15 @@ const MunicipalitySelection: React.FC = () => {
       }
     }
     
+    // Obtener la plaza disponible según las prioridades
     const selectedPlaza = getAvailablePlazaByPriority(priorities, aspirantePuesto);
     
     if (!selectedPlaza) {
       toast.error('No hay plazas disponibles según sus prioridades');
       return;
     }
+    
+    console.log(`Plaza seleccionada según prioridades: ${selectedPlaza}`);
     
     if (cedula) {
       const success = await updatePlazaDeseada(cedula, selectedPlaza);
@@ -208,6 +238,8 @@ const MunicipalitySelection: React.FC = () => {
     setMunicipalitiesWithPriority(prev => 
       prev.map(item => ({ ...item, prioridad: 0 }))
     );
+    
+    toast.info("Se han reiniciado todas las prioridades");
   };
 
   const exportToPDF = () => {

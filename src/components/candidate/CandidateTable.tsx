@@ -35,7 +35,7 @@ const CandidateTable: React.FC<CandidateTableProps> = ({
   return (
     <div className="overflow-x-auto bg-white rounded-lg shadow">
       <Table>
-        <TableHeader className="bg-aeronautica-light">
+        <TableHeader className="bg-aeronautica">
           <TableRow>
             <TableHead className="text-white font-semibold">Puesto</TableHead>
             <TableHead className="text-white font-semibold">Puntaje</TableHead>

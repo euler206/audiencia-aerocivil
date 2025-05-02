@@ -1,12 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Aspirante, 
-  aspirantes, 
-  loadFromLocalStorage,
-  plazas 
-} from '@/lib';
+import { Aspirante, loadFromLocalStorage } from '@/lib';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -28,8 +23,8 @@ const CandidateList: React.FC = () => {
         console.log("Cargando datos desde localStorage/Supabase...");
         await loadFromLocalStorage();
         
-        // Ordenar aspirantes por puesto después de cargarlos
-        const sortedAspirantes = [...aspirantes].sort((a, b) => a.puesto - b.puesto);
+        // Obtener y ordenar aspirantes
+        const sortedAspirantes = getSortedAspirantes();
         console.log(`Datos cargados: ${sortedAspirantes.length} aspirantes`);
         setDisplayedAspirantes(sortedAspirantes);
       } catch (error) {
@@ -45,11 +40,15 @@ const CandidateList: React.FC = () => {
     loadData();
   }, [refreshTrigger, toast]);
 
+  // Función para obtener aspirantes ordenados
+  const getSortedAspirantes = (): Aspirante[] => {
+    // Importamos aspirantes dinámicamente para asegurarnos de tener los datos más recientes
+    const { aspirantes } = require('@/lib');
+    return [...aspirantes].sort((a, b) => a.puesto - b.puesto);
+  };
+
   // Manejar la selección de vacante
   const handleSelectVacancy = (cedula: string) => {
-    const aspirante = aspirantes.find(a => a.cedula === cedula);
-    if (!aspirante) return;
-    
     navigate(`/select-vacancy/${cedula}`);
   };
 
@@ -86,6 +85,12 @@ const CandidateList: React.FC = () => {
     }
   };
 
+  // Manejar cambios en la búsqueda
+  const handleSearchChange = (filteredAspirantes: Aspirante[]) => {
+    // Asegurarse de que los aspirantes siempre estén ordenados por puesto
+    setDisplayedAspirantes([...filteredAspirantes].sort((a, b) => a.puesto - b.puesto));
+  };
+
   return (
     <div className="container mx-auto px-4 py-6">
       <CandidateListHeader 
@@ -94,10 +99,10 @@ const CandidateList: React.FC = () => {
       />
       
       <CandidateListManager
-        aspirantes={aspirantes}
+        aspirantes={getSortedAspirantes()}
         isAdmin={isAdmin}
         onSelectionsClear={handleClearAllSelections}
-        onSearchChange={setDisplayedAspirantes}
+        onSearchChange={handleSearchChange}
       />
       
       <CandidateTable 
