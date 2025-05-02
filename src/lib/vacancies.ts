@@ -110,46 +110,45 @@ export const updatePlazaDeseada = async (cedula: string, plaza: string): Promise
 export const updateAllPlazasDeseadas = async (): Promise<boolean> => {
   console.log("Limpiando todas las plazas deseadas");
   
-  // Limpiar la plaza deseada de todos los aspirantes
-  aspirantes.forEach(aspirante => {
-    aspirante.plazaDeseada = '';
-  });
+  try {
+    // Primero, obtener la lista actualizada de aspirantes desde Supabase
+    const { data: supabaseAspirantes, error } = await supabase
+      .from('aspirantes')
+      .select('*');
+      
+    if (error) {
+      console.error("Error al obtener aspirantes de Supabase:", error);
+      return false;
+    }
+    
+    // Actualizar los aspirantes locales con los datos de Supabase
+    if (supabaseAspirantes) {
+      // Mapear datos de Supabase a formato local
+      for (let i = 0; i < aspirantes.length; i++) {
+        const supabaseAspirante = supabaseAspirantes.find(a => a.cedula === aspirantes[i].cedula);
+        if (supabaseAspirante) {
+          aspirantes[i].plazaDeseada = supabaseAspirante.plaza_deseada || '';
+        } else {
+          aspirantes[i].plazaDeseada = '';
+        }
+      }
+    } else {
+      // Si no hay datos de Supabase, limpiar localmente
+      aspirantes.forEach(aspirante => {
+        aspirante.plazaDeseada = '';
+      });
+    }
+  } catch (error) {
+    console.error("Error al sincronizar con Supabase:", error);
+  }
   
   // Limpiar todas las prioridades guardadas en localStorage
   aspirantes.forEach(aspirante => {
     localStorage.removeItem(`prioridades_${aspirante.cedula}`);
   });
   
-  // Try to update all in Supabase
-  try {
-    console.log("Limpiando plazas en Supabase");
-    const { error } = await supabase
-      .from('aspirantes')
-      .update({ plaza_deseada: null });
-      
-    if (error) {
-      console.error("Error al limpiar plazas en Supabase:", error);
-    } else {
-      console.log("Plazas limpiadas correctamente en Supabase");
-    }
-    
-    // Also clear prioridades table
-    console.log("Limpiando prioridades en Supabase");
-    const { error: prioridadesError } = await supabase
-      .from('prioridades')
-      .delete()
-      .neq('id', 0);
-      
-    if (prioridadesError) {
-      console.error("Error al limpiar prioridades en Supabase:", prioridadesError);
-    } else {
-      console.log("Prioridades limpiadas correctamente en Supabase");
-    }
-  } catch (error) {
-    console.error("Error al actualizar en Supabase:", error);
-  }
-  
-  // Guardar los cambios en localStorage
+  // Guardar los cambios actualizados en localStorage
   saveToLocalStorage();
+  console.log("Proceso de limpieza completado");
   return true;
 };

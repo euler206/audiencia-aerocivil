@@ -35,14 +35,14 @@ const CandidateTable: React.FC<CandidateTableProps> = ({
   return (
     <div className="overflow-x-auto bg-white rounded-lg shadow">
       <Table>
-        <TableHeader>
+        <TableHeader className="bg-aeronautica-light">
           <TableRow>
-            <TableHead>Puesto</TableHead>
-            <TableHead>Puntaje</TableHead>
-            {isAdmin && <TableHead>Cédula</TableHead>}
-            <TableHead>Nombre</TableHead>
-            <TableHead>Plaza Deseada</TableHead>
-            <TableHead>Acción</TableHead>
+            <TableHead className="text-white font-semibold">Puesto</TableHead>
+            <TableHead className="text-white font-semibold">Puntaje</TableHead>
+            {isAdmin && <TableHead className="text-white font-semibold">Cédula</TableHead>}
+            <TableHead className="text-white font-semibold">Nombre</TableHead>
+            <TableHead className="text-white font-semibold">Plaza Deseada</TableHead>
+            <TableHead className="text-white font-semibold">Acción</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

@@ -25,13 +25,18 @@ const CandidateList: React.FC = () => {
   const [search, setSearch] = useState('');
   const [displayedAspirantes, setDisplayedAspirantes] = useState<Aspirante[]>([...aspirantes]);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // Usado para forzar actualizaciones
 
   useEffect(() => {
-    loadFromLocalStorage();
-    // Ordenar aspirantes por puesto después de cargarlos
-    const sortedAspirantes = [...aspirantes].sort((a, b) => a.puesto - b.puesto);
-    setDisplayedAspirantes(sortedAspirantes);
-  }, []);
+    const loadData = async () => {
+      await loadFromLocalStorage();
+      // Ordenar aspirantes por puesto después de cargarlos
+      const sortedAspirantes = [...aspirantes].sort((a, b) => a.puesto - b.puesto);
+      setDisplayedAspirantes(sortedAspirantes);
+    };
+    
+    loadData();
+  }, [refreshTrigger]); // Se ejecuta al cargar y cuando cambia refreshTrigger
 
   const handleSelectVacancy = (cedula: string) => {
     const aspirante = aspirantes.find(a => a.cedula === cedula);
@@ -141,12 +146,14 @@ const CandidateList: React.FC = () => {
     setIsConfirmDialogOpen(true);
   };
 
-  const confirmClearAllSelections = () => {
-    const success = clearAllSelections();
+  const confirmClearAllSelections = async () => {
+    console.log("Iniciando proceso de borrado de selecciones...");
+    const success = await clearAllSelections();
+    console.log("Resultado del borrado:", success);
     
     if (success) {
-      loadFromLocalStorage(); // Recargar datos
-      setDisplayedAspirantes([...aspirantes]); // Actualizar la lista
+      // Recargar datos y actualizar la interfaz
+      setRefreshTrigger(prev => prev + 1); // Forzar recarga de datos
       
       toast({
         title: "Operación exitosa",
@@ -156,7 +163,7 @@ const CandidateList: React.FC = () => {
     } else {
       toast({
         title: "Error",
-        description: "No tienes permiso para realizar esta acción",
+        description: "No se pudieron eliminar las selecciones o no tienes permiso para esta acción",
         variant: "destructive"
       });
     }

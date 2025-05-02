@@ -10,6 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface ClearSelectionsDialogProps {
   isOpen: boolean;
@@ -22,14 +23,10 @@ const ClearSelectionsDialog: React.FC<ClearSelectionsDialogProps> = ({
   onOpenChange,
   onConfirm
 }) => {
-  const handleConfirm = async () => {
-    try {
-      await onConfirm();
-      toast.success('Todas las selecciones han sido borradas exitosamente');
-    } catch (error) {
-      toast.error('Error al borrar las selecciones');
-      console.error('Error:', error);
-    }
+  const { toast } = useToast();
+
+  const handleConfirm = () => {
+    onConfirm();
   };
 
   return (

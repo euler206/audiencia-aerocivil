@@ -2,6 +2,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAspiranteByCredentials, Aspirante, initializeStorage, updateAllPlazasDeseadas } from '@/lib';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -10,7 +11,7 @@ interface AuthContextType {
   logout: () => void;
   userId: string | null;
   currentUser: Aspirante | null;
-  clearAllSelections: () => boolean;
+  clearAllSelections: () => Promise<boolean>;
   verifyIdentity: (cedula: string) => boolean;
 }
 
@@ -21,7 +22,7 @@ export const AuthContext = createContext<AuthContextType>({
   logout: () => {},
   userId: null,
   currentUser: null,
-  clearAllSelections: () => false,
+  clearAllSelections: async () => false,
   verifyIdentity: () => false,
 });
 
@@ -106,23 +107,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const clearAllSelections = async (): Promise<boolean> => {
     if (isAdmin) {
       try {
-        // Actualizar en Supabase primero
+        console.log('Iniciando proceso para borrar todas las selecciones...');
+        
+        // 1. Actualizar en Supabase
         const { error } = await supabase
           .from('aspirantes')
-          .update({ plazaDeseada: null })
-          .neq('cedula', 'admin');
+          .update({ plaza_deseada: null });
         
         if (error) {
-          console.error('Error clearing selections in Supabase:', error);
+          console.error('Error limpiando selecciones en Supabase:', error);
           return false;
         }
         
-        // Solo si la actualización en Supabase fue exitosa, actualizar localmente
-        updateAllPlazasDeseadas();
+        console.log('Selecciones borradas correctamente en Supabase');
+        
+        // 2. Borrar todas las prioridades almacenadas
+        const { error: errorPrioridades } = await supabase
+          .from('prioridades')
+          .delete()
+          .neq('id', 0);
+        
+        if (errorPrioridades) {
+          console.error('Error borrando prioridades en Supabase:', errorPrioridades);
+        } else {
+          console.log('Prioridades borradas correctamente en Supabase');
+        }
+        
+        // 3. Actualizar datos locales después de la operación exitosa en Supabase
+        const success = await updateAllPlazasDeseadas();
+        console.log('Resultado de actualización local:', success);
         
         return true;
       } catch (error) {
-        console.error('Error in clearAllSelections:', error);
+        console.error('Error en clearAllSelections:', error);
         return false;
       }
     }
