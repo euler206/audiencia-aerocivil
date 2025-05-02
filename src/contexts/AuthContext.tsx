@@ -105,45 +105,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const clearAllSelections = async (): Promise<boolean> => {
-    if (isAdmin) {
-      try {
-        console.log('Iniciando proceso para borrar todas las selecciones...');
-        
-        // 1. Actualizar en Supabase
-        const { error } = await supabase
-          .from('aspirantes')
-          .update({ plaza_deseada: null });
-        
-        if (error) {
-          console.error('Error limpiando selecciones en Supabase:', error);
-          return false;
-        }
-        
-        console.log('Selecciones borradas correctamente en Supabase');
-        
-        // 2. Borrar todas las prioridades almacenadas
-        const { error: errorPrioridades } = await supabase
-          .from('prioridades')
-          .delete()
-          .neq('id', 0);
-        
-        if (errorPrioridades) {
-          console.error('Error borrando prioridades en Supabase:', errorPrioridades);
-        } else {
-          console.log('Prioridades borradas correctamente en Supabase');
-        }
-        
-        // 3. Actualizar datos locales después de la operación exitosa en Supabase
-        const success = await updateAllPlazasDeseadas();
-        console.log('Resultado de actualización local:', success);
-        
-        return true;
-      } catch (error) {
-        console.error('Error en clearAllSelections:', error);
+    if (!isAdmin) {
+      console.error('Solo el administrador puede borrar todas las selecciones');
+      return false;
+    }
+    
+    try {
+      console.log('Iniciando proceso para borrar todas las selecciones...');
+      
+      // 1. Actualizar en Supabase - usar el método correcto
+      const { error } = await supabase
+        .from('aspirantes')
+        .update({ plaza_deseada: null })
+        .neq('cedula', 'no-existe'); // Asegurarnos de actualizar todas las filas
+      
+      if (error) {
+        console.error('Error limpiando selecciones en Supabase:', error);
         return false;
       }
+      
+      console.log('Selecciones borradas correctamente en Supabase');
+      
+      // 2. Borrar todas las prioridades almacenadas
+      const { error: errorPrioridades } = await supabase
+        .from('prioridades')
+        .delete()
+        .neq('id', 0);
+      
+      if (errorPrioridades) {
+        console.error('Error borrando prioridades en Supabase:', errorPrioridades);
+      } else {
+        console.log('Prioridades borradas correctamente en Supabase');
+      }
+      
+      // 3. Actualizar datos locales después de la operación exitosa en Supabase
+      const success = await updateAllPlazasDeseadas();
+      console.log('Resultado de actualización local:', success);
+      
+      return success;
+    } catch (error) {
+      console.error('Error en clearAllSelections:', error);
+      return false;
     }
-    return false;
   };
 
   const verifyIdentity = (cedula: string): boolean => {

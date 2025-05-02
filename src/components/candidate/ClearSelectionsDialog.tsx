@@ -27,6 +27,7 @@ const ClearSelectionsDialog: React.FC<ClearSelectionsDialogProps> = ({
 
   const handleConfirm = () => {
     onConfirm();
+    // El diálogo se cerrará automáticamente después de llamar a onConfirm
   };
 
   return (

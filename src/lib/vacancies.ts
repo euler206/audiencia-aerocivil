@@ -121,6 +121,8 @@ export const updateAllPlazasDeseadas = async (): Promise<boolean> => {
       return false;
     }
     
+    console.log(`Datos recibidos de Supabase: ${supabaseAspirantes ? supabaseAspirantes.length : 0} aspirantes`);
+    
     // Actualizar los aspirantes locales con los datos de Supabase
     if (supabaseAspirantes) {
       // Mapear datos de Supabase a formato local
@@ -128,18 +130,22 @@ export const updateAllPlazasDeseadas = async (): Promise<boolean> => {
         const supabaseAspirante = supabaseAspirantes.find(a => a.cedula === aspirantes[i].cedula);
         if (supabaseAspirante) {
           aspirantes[i].plazaDeseada = supabaseAspirante.plaza_deseada || '';
+          console.log(`Aspirante ${aspirantes[i].cedula} actualizado con plaza: ${aspirantes[i].plazaDeseada}`);
         } else {
           aspirantes[i].plazaDeseada = '';
+          console.log(`No se encontró el aspirante ${aspirantes[i].cedula} en Supabase, limpiando su plaza`);
         }
       }
     } else {
       // Si no hay datos de Supabase, limpiar localmente
+      console.log("No se recibieron datos de Supabase, limpiando todas las plazas localmente");
       aspirantes.forEach(aspirante => {
         aspirante.plazaDeseada = '';
       });
     }
   } catch (error) {
     console.error("Error al sincronizar con Supabase:", error);
+    return false;
   }
   
   // Limpiar todas las prioridades guardadas en localStorage
