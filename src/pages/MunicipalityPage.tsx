@@ -1,15 +1,23 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Header from '@/components/Header';
 import MunicipalitySelection from '@/components/MunicipalitySelection';
 import { useAuth } from '@/contexts/AuthContext';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useParams } from 'react-router-dom';
 
 const MunicipalityPage: React.FC = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, verifyIdentity } = useAuth();
+  const { cedula } = useParams<{ cedula: string }>();
+
+  // Verificar si hay un cédula en la URL y si el usuario está autorizado
+  const isAuthorized = cedula ? verifyIdentity(cedula) : false;
 
   if (!isAuthenticated) {
     return <Navigate to="/" replace />;
+  }
+
+  if (cedula && !isAuthorized) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return (
