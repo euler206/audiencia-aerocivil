@@ -4,9 +4,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { 
   plazas, 
   aspirantes, 
-  updatePlazaDeseada, 
   getAvailablePlazaByPriority 
 } from '@/lib';
+import { updatePlazaDeseada } from '@/lib/vacancies';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -80,7 +80,7 @@ export const useMunicipalitySelection = () => {
           const updatedMunicipalities = initialMunicipalities.map(m => ({
             ...m,
             prioridad: prioridadesMap.get(m.municipio) || 0
-          }));
+          })) as PriorityMunicipality[];
           
           setMunicipalitiesWithPriority(updatedMunicipalities);
         } 
@@ -100,7 +100,7 @@ export const useMunicipalitySelection = () => {
             
             const updatedMunicipalities = initialMunicipalities.map(m => ({
               ...m,
-              prioridad: prioridadesMap.get(m.municipio) || 0
+              prioridad: Number(prioridadesMap.get(m.municipio)) || 0
             }));
             
             setMunicipalitiesWithPriority(updatedMunicipalities);
