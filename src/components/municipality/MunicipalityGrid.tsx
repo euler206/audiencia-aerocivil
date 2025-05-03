@@ -1,13 +1,7 @@
 
 import React, { useMemo } from 'react';
 import MunicipalityCard from './MunicipalityCard';
-
-interface PriorityMunicipality {
-  departamento: string;
-  municipio: string;
-  vacantes: number;
-  prioridad: number;
-}
+import { PriorityMunicipality } from './types';
 
 interface MunicipalityGridProps {
   municipalities: PriorityMunicipality[];
@@ -24,41 +18,64 @@ const MunicipalityGrid: React.FC<MunicipalityGridProps> = ({
 }) => {
   // Crear un mapa para calcular rápidamente los aspirantes por plaza
   const aspirantesPorPlaza = useMemo(() => {
+    console.log("Recalculando mapa de aspirantes por plaza");
     const plazaMap = new Map<string, number>();
     
-    // Solo procesar los aspirantes relevantes (con mejor puesto)
-    aspirantes
-      .filter(a => a.plazaDeseada && a.puesto < aspirantePuesto)
-      .forEach(a => {
-        const count = plazaMap.get(a.plazaDeseada) || 0;
-        plazaMap.set(a.plazaDeseada, count + 1);
-      });
+    // Filtrar primero, para evitar iteraciones innecesarias
+    const aspirantesRelevantes = aspirantes.filter(a => 
+      a.plazaDeseada && a.puesto < aspirantePuesto
+    );
+    
+    // Luego poblar el mapa con los aspirantes filtrados
+    aspirantesRelevantes.forEach(a => {
+      const count = plazaMap.get(a.plazaDeseada) || 0;
+      plazaMap.set(a.plazaDeseada, count + 1);
+    });
       
     return plazaMap;
   }, [aspirantes, aspirantePuesto]);
   
+  // Memorizar la lista de municipios procesados para evitar recálculos
+  const processedMunicipalities = useMemo(() => {
+    console.log("Procesando municipalidades");
+    return municipalities.map((plaza) => {
+      const aspirantesConMejorPuesto = aspirantesPorPlaza.get(plaza.municipio) || 0;
+      const disponible = aspirantesConMejorPuesto < plaza.vacantes;
+      
+      return {
+        ...plaza,
+        ocupadas: aspirantesConMejorPuesto,
+        disponible
+      };
+    });
+  }, [municipalities, aspirantesPorPlaza]);
+  
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
-      {municipalities.map((plaza) => {
-        // Usar el mapa para obtener aspirantes con mejor puesto
-        const aspirantesConMejorPuesto = aspirantesPorPlaza.get(plaza.municipio) || 0;
-        const disponible = aspirantesConMejorPuesto < plaza.vacantes;
-        
-        return (
-          <MunicipalityCard 
-            key={plaza.municipio}
-            municipio={plaza.municipio}
-            departamento={plaza.departamento}
-            vacantes={plaza.vacantes}
-            ocupadas={aspirantesConMejorPuesto}
-            prioridad={plaza.prioridad}
-            disponible={disponible}
-            onClick={() => onSetPriority(plaza.municipio)}
-          />
-        );
-      })}
+      {processedMunicipalities.map((plaza) => (
+        <MemoizedMunicipalityCard 
+          key={plaza.municipio}
+          municipio={plaza.municipio}
+          departamento={plaza.departamento}
+          vacantes={plaza.vacantes}
+          ocupadas={plaza.ocupadas}
+          prioridad={plaza.prioridad}
+          disponible={plaza.disponible}
+          onClick={() => onSetPriority(plaza.municipio)}
+        />
+      ))}
     </div>
   );
 };
+
+// Componente memorizado para evitar renderizados innecesarios
+const MemoizedMunicipalityCard = React.memo(MunicipalityCard, 
+  (prevProps, nextProps) => {
+    // Solo renderizar si cambian propiedades relevantes
+    return prevProps.prioridad === nextProps.prioridad && 
+           prevProps.disponible === nextProps.disponible &&
+           prevProps.ocupadas === nextProps.ocupadas;
+  }
+);
 
 export default React.memo(MunicipalityGrid);

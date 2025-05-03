@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useMunicipalitySelection } from './municipality/useMunicipalitySelection';
 import MunicipalityActions from './municipality/MunicipalityActions';
 import PriorityLegend from './municipality/PriorityLegend';
@@ -17,6 +17,11 @@ const MunicipalitySelection: React.FC = () => {
     handleReset,
     exportToPDF
   } = useMunicipalitySelection();
+
+  // Memorizar la función de manipulación de prioridad para evitar recreaciones
+  const handlePriorityChange = useCallback((municipio: string) => {
+    handleSetPriority(municipio);
+  }, [handleSetPriority]);
 
   if (isLoading) {
     return (
@@ -44,7 +49,7 @@ const MunicipalitySelection: React.FC = () => {
         municipalities={municipalitiesWithPriority}
         aspirantePuesto={aspirantePuesto}
         aspirantes={aspirantes}
-        onSetPriority={handleSetPriority}
+        onSetPriority={handlePriorityChange}
       />
     </div>
   );
