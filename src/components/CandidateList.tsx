@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Aspirante, loadFromLocalStorage } from '@/lib';
+import { Aspirante, loadFromLocalStorage, aspirantes } from '@/lib';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -42,8 +42,7 @@ const CandidateList: React.FC = () => {
 
   // Función para obtener aspirantes ordenados
   const getSortedAspirantes = (): Aspirante[] => {
-    // Importamos aspirantes dinámicamente para asegurarnos de tener los datos más recientes
-    const { aspirantes } = require('@/lib');
+    // Importamos aspirantes directamente desde el módulo importado
     return [...aspirantes].sort((a, b) => a.puesto - b.puesto);
   };
 
