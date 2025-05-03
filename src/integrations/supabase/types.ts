@@ -106,7 +106,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      actualizar_posiciones_aspirantes: {
+        Args: { cedula_aspirante: string; nuevo_puesto: number }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

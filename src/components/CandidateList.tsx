@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Aspirante, loadFromLocalStorage, aspirantes } from '@/lib';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 import CandidateListHeader from './candidate/CandidateListHeader';
 import CandidateListManager from './candidate/CandidateListManager';
@@ -84,6 +85,58 @@ const CandidateList: React.FC = () => {
     }
   };
 
+  // Manejar cambio de posición de un aspirante
+  const handlePositionChange = async (cedula: string, nuevoPuesto: number) => {
+    if (!isAdmin) {
+      console.error("Solo administradores pueden cambiar posiciones");
+      toast({
+        title: "Acceso denegado",
+        description: "No tienes permisos para realizar esta acción",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    console.log(`Cambiando posición del aspirante ${cedula} a ${nuevoPuesto}`);
+    
+    try {
+      // Llamar a la función de Supabase para actualizar la posición
+      const { data, error } = await supabase.rpc('actualizar_posiciones_aspirantes', {
+        cedula_aspirante: cedula,
+        nuevo_puesto: nuevoPuesto
+      });
+      
+      if (error) {
+        console.error("Error al actualizar posición:", error);
+        toast({
+          title: "Error",
+          description: error.message || "No se pudo cambiar la posición",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      console.log("Respuesta de la actualización:", data);
+      
+      // Recargar datos para actualizar la interfaz
+      await loadFromLocalStorage();
+      setRefreshTrigger(prev => prev + 1);
+      
+      toast({
+        title: "Posición actualizada",
+        description: "Se ha actualizado la posición del aspirante correctamente",
+        variant: "default"
+      });
+    } catch (error) {
+      console.error("Error en handlePositionChange:", error);
+      toast({
+        title: "Error",
+        description: "Ocurrió un error inesperado al cambiar la posición",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Manejar cambios en la búsqueda
   const handleSearchChange = (filteredAspirantes: Aspirante[]) => {
     // Asegurarse de que los aspirantes siempre estén ordenados por puesto
@@ -107,7 +160,8 @@ const CandidateList: React.FC = () => {
       <CandidateTable 
         aspirantes={displayedAspirantes} 
         isAdmin={isAdmin} 
-        onSelectVacancy={handleSelectVacancy} 
+        onSelectVacancy={handleSelectVacancy}
+        onPositionChange={isAdmin ? handlePositionChange : undefined}
       />
     </div>
   );

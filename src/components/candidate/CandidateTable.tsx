@@ -16,12 +16,14 @@ interface CandidateTableProps {
   aspirantes: Aspirante[];
   isAdmin: boolean;
   onSelectVacancy: (cedula: string) => void;
+  onPositionChange?: (cedula: string, nuevoPuesto: number) => Promise<void>;
 }
 
 const CandidateTable: React.FC<CandidateTableProps> = ({
   aspirantes,
   isAdmin,
-  onSelectVacancy
+  onSelectVacancy,
+  onPositionChange
 }) => {
   // Crear un mapa para contar cuántos aspirantes han seleccionado cada plaza
   const plazasSeleccionadasCount: Record<string, number> = {};
@@ -58,6 +60,7 @@ const CandidateTable: React.FC<CandidateTableProps> = ({
                 plazaSeleccionada={plazaSeleccionada}
                 aspirantesConMismaPlaza={aspirantesConMismaPlaza}
                 onSelectVacancy={onSelectVacancy}
+                onPositionChange={onPositionChange}
               />
             );
           })}
