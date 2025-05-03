@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
   plazas, 
@@ -38,89 +38,114 @@ export const useMunicipalitySelection = () => {
     }
   }, [cedula, navigate, verifyIdentity]);
 
+  // Cargar datos iniciales de forma optimizada
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
-      const aspirante = aspirantes.find(a => a.cedula === cedula);
-      if (aspirante) {
+      
+      try {
+        // Buscar aspirante por cédula (optimizado con find)
+        const aspirante = aspirantes.find(a => a.cedula === cedula);
+        
+        if (!aspirante) {
+          console.error(`No se encontró aspirante con cédula ${cedula}`);
+          setIsLoading(false);
+          return;
+        }
+        
         setAspirantePuesto(aspirante.puesto);
-        // El número máximo de prioridades debe ser igual al puesto del aspirante
         setMaxPrioridades(aspirante.puesto);
         console.log(`Aspirante ${cedula} en puesto ${aspirante.puesto}, puede seleccionar ${aspirante.puesto} prioridades`);
         
-        const municipalitiesWithPriority = plazas.map(plaza => ({
+        // Crearemos un mapa inicial para todos los municipios
+        const initialMunicipalities = plazas.map(plaza => ({
           ...plaza,
           prioridad: 0
         }));
-
-        try {
-          // Intentar cargar prioridades de Supabase
-          const { data: prioridadesData, error } = await supabase
-            .from('prioridades')
-            .select('*')
-            .eq('aspirante_id', cedula);
+        
+        // Cargar prioridades desde Supabase con manejo de errores mejorado
+        const { data: prioridadesData, error } = await supabase
+          .from('prioridades')
+          .select('*')
+          .eq('aspirante_id', cedula);
+        
+        if (!error && prioridadesData && prioridadesData.length > 0) {
+          console.log("Prioridades cargadas desde Supabase:", prioridadesData);
           
-          if (!error && prioridadesData && prioridadesData.length > 0) {
-            console.log("Prioridades cargadas desde Supabase:", prioridadesData);
-            // Si hay datos en Supabase, usarlos
-            prioridadesData.forEach(p => {
-              const index = municipalitiesWithPriority.findIndex(m => m.municipio === p.municipio);
-              if (index >= 0) {
-                municipalitiesWithPriority[index].prioridad = p.prioridad;
-              }
-            });
-          } 
-          else {
-            console.log("No se encontraron prioridades en Supabase, buscando en localStorage");
-            // Fallback a localStorage
-            const prioridadesString = localStorage.getItem(`prioridades_${cedula}`);
-            if (prioridadesString) {
-              const prioridades = JSON.parse(prioridadesString);
-              prioridades.forEach((p: { municipio: string, prioridad: number }) => {
-                const index = municipalitiesWithPriority.findIndex(m => m.municipio === p.municipio);
-                if (index >= 0) {
-                  municipalitiesWithPriority[index].prioridad = p.prioridad;
-                }
-              });
-            } 
-            else if (aspirante.plazaDeseada) {
-              const index = municipalitiesWithPriority.findIndex(m => m.municipio === aspirante.plazaDeseada);
-              if (index >= 0) {
-                municipalitiesWithPriority[index].prioridad = 1;
-              }
-            }
-          }
-        } catch (error) {
-          console.error("Error al cargar prioridades:", error);
+          // Usar un mapa para actualizar prioridades de forma más eficiente
+          const prioridadesMap = new Map(
+            prioridadesData.map(p => [p.municipio, p.prioridad])
+          );
           
-          // Fallback a localStorage en caso de error
+          const updatedMunicipalities = initialMunicipalities.map(m => ({
+            ...m,
+            prioridad: prioridadesMap.get(m.municipio) || 0
+          }));
+          
+          setMunicipalitiesWithPriority(updatedMunicipalities);
+        } 
+        else {
+          console.log("No se encontraron prioridades en Supabase, buscando en localStorage");
+          
+          // Fallback a localStorage
           const prioridadesString = localStorage.getItem(`prioridades_${cedula}`);
+          
           if (prioridadesString) {
             const prioridades = JSON.parse(prioridadesString);
-            prioridades.forEach((p: { municipio: string, prioridad: number }) => {
-              const index = municipalitiesWithPriority.findIndex(m => m.municipio === p.municipio);
-              if (index >= 0) {
-                municipalitiesWithPriority[index].prioridad = p.prioridad;
-              }
-            });
+            
+            // Usar un mapa para la actualización
+            const prioridadesMap = new Map(
+              prioridades.map((p: { municipio: string, prioridad: number }) => [p.municipio, p.prioridad])
+            );
+            
+            const updatedMunicipalities = initialMunicipalities.map(m => ({
+              ...m,
+              prioridad: prioridadesMap.get(m.municipio) || 0
+            }));
+            
+            setMunicipalitiesWithPriority(updatedMunicipalities);
+          } 
+          else if (aspirante.plazaDeseada) {
+            const updatedMunicipalities = initialMunicipalities.map(m => ({
+              ...m,
+              prioridad: m.municipio === aspirante.plazaDeseada ? 1 : 0
+            }));
+            
+            setMunicipalitiesWithPriority(updatedMunicipalities);
+          }
+          else {
+            setMunicipalitiesWithPriority(initialMunicipalities);
           }
         }
+      } catch (error) {
+        console.error("Error al cargar datos:", error);
+        toast.error("Error al cargar datos de prioridades");
         
-        setMunicipalitiesWithPriority(municipalitiesWithPriority);
+        // Establecer un estado básico en caso de error
+        const initialMunicipalities = plazas.map(plaza => ({
+          ...plaza,
+          prioridad: 0
+        }));
+        
+        setMunicipalitiesWithPriority(initialMunicipalities);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
     
     loadData();
   }, [cedula, verifyIdentity]);
 
-  const handleSetPriority = (municipio: string) => {
+  // Memoizar la función para evitar recreaciones en cada renderizado
+  const handleSetPriority = useCallback((municipio: string) => {
     setMunicipalitiesWithPriority(prev => {
       // Copiar el estado previo para modificarlo
       const newState = [...prev];
-      const item = newState.find(item => item.municipio === municipio);
+      const itemIndex = newState.findIndex(item => item.municipio === municipio);
       
-      if (!item) return prev;
+      if (itemIndex === -1) return prev;
+      
+      const item = newState[itemIndex];
       
       // Si ya tiene prioridad, quitársela
       if (item.prioridad > 0) {
@@ -150,83 +175,71 @@ export const useMunicipalitySelection = () => {
       toast.error(`Solo puede seleccionar ${maxPrioridades} prioridades según su puesto`);
       return prev;
     });
-  };
+  }, [maxPrioridades]);
 
-  const handleSaveSelection = async () => {
-    setIsSaving(true);
-    const priorities = municipalitiesWithPriority
-      .filter(item => item.prioridad > 0)
-      .map(item => ({ municipio: item.municipio, prioridad: item.prioridad }));
-    
-    if (priorities.length === 0) {
-      toast.error('Debe seleccionar al menos una plaza');
-      setIsSaving(false);
+  // Optimizar el guardado de selección para evitar congelamientos
+  const handleSaveSelection = useCallback(async () => {
+    if (!cedula) {
+      toast.error("No se ha identificado al aspirante");
       return;
     }
     
-    console.log(`Guardando selección de ${priorities.length} prioridades para aspirante ${cedula}`);
+    setIsSaving(true);
     
-    if (cedula) {
-      // Guardar en localStorage como fallback
-      localStorage.setItem(`prioridades_${cedula}`, JSON.stringify(priorities));
-      console.log("Prioridades guardadas en localStorage");
+    try {
+      const priorities = municipalitiesWithPriority
+        .filter(item => item.prioridad > 0)
+        .map(item => ({ municipio: item.municipio, prioridad: item.prioridad }));
       
-      // Guardar en Supabase
-      try {
-        // First delete existing priorities
-        const { error: deleteError } = await supabase
-          .from('prioridades')
-          .delete()
-          .eq('aspirante_id', cedula);
-        
-        if (deleteError) {
-          console.error("Error al eliminar prioridades existentes:", deleteError);
-          toast.error("Error al eliminar prioridades existentes");
-        } else {
-          console.log("Prioridades anteriores eliminadas correctamente");
-        }
-        
-        // Then insert new ones
-        const prioridadesSupabase = priorities.map(p => ({
-          aspirante_id: cedula,
-          municipio: p.municipio,
-          prioridad: p.prioridad
-        }));
-        
-        console.log("Guardando prioridades en Supabase:", prioridadesSupabase);
-        
-        const { error } = await supabase
-          .from('prioridades')
-          .insert(prioridadesSupabase);
-        
-        if (error) {
-          console.error("Error al guardar prioridades en Supabase:", error);
-          toast.error("Error al guardar prioridades en la base de datos");
-          setIsSaving(false);
-          return;
-        } else {
-          console.log("Prioridades guardadas exitosamente en Supabase");
-        }
-      } catch (error) {
-        console.error("Error al interactuar con Supabase:", error);
-        toast.error("Error al interactuar con la base de datos");
-        setIsSaving(false);
+      if (priorities.length === 0) {
+        toast.error('Debe seleccionar al menos una plaza');
         return;
       }
-    }
-    
-    // Obtener la plaza disponible según las prioridades
-    const selectedPlaza = getAvailablePlazaByPriority(priorities, aspirantePuesto);
-    
-    if (!selectedPlaza) {
-      toast.error('No hay plazas disponibles según sus prioridades');
-      setIsSaving(false);
-      return;
-    }
-    
-    console.log(`Plaza seleccionada según prioridades: ${selectedPlaza}`);
-    
-    if (cedula) {
+      
+      console.log(`Guardando selección de ${priorities.length} prioridades para aspirante ${cedula}`);
+      
+      // 1. Guardar en localStorage como fallback (operación rápida)
+      localStorage.setItem(`prioridades_${cedula}`, JSON.stringify(priorities));
+      
+      // 2. Preparar objeto para guardar en Supabase
+      const prioridadesSupabase = priorities.map(p => ({
+        aspirante_id: cedula,
+        municipio: p.municipio,
+        prioridad: p.prioridad
+      }));
+      
+      // 3. Eliminar prioridades existentes
+      const { error: deleteError } = await supabase
+        .from('prioridades')
+        .delete()
+        .eq('aspirante_id', cedula);
+      
+      if (deleteError) {
+        console.error("Error al eliminar prioridades existentes:", deleteError);
+        toast.error("Error al eliminar prioridades existentes");
+        return;
+      }
+      
+      // 4. Insertar nuevas prioridades
+      const { error: insertError } = await supabase
+        .from('prioridades')
+        .insert(prioridadesSupabase);
+      
+      if (insertError) {
+        console.error("Error al guardar prioridades en Supabase:", insertError);
+        toast.error("Error al guardar prioridades en la base de datos");
+        return;
+      }
+      
+      // 5. Calcular plaza disponible (usando función optimizada)
+      const selectedPlaza = getAvailablePlazaByPriority(priorities, aspirantePuesto);
+      
+      if (!selectedPlaza) {
+        toast.error('No hay plazas disponibles según sus prioridades');
+        return;
+      }
+      
+      // 6. Actualizar plaza deseada (operación optimizada)
       const success = await updatePlazaDeseada(cedula, selectedPlaza);
       
       if (success) {
@@ -235,19 +248,26 @@ export const useMunicipalitySelection = () => {
       } else {
         toast.error('Error al asignar la plaza');
       }
+      
+    } catch (error) {
+      console.error("Error en el proceso de guardado:", error);
+      toast.error("Error al guardar la selección");
+    } finally {
+      setIsSaving(false);
     }
-    setIsSaving(false);
-  };
+  }, [municipalitiesWithPriority, aspirantePuesto, cedula, navigate]);
 
-  const handleReset = () => {
+  // Función para restablecer todas las prioridades
+  const handleReset = useCallback(() => {
     setMunicipalitiesWithPriority(prev => 
       prev.map(item => ({ ...item, prioridad: 0 }))
     );
     
     toast.info("Se han reiniciado todas las prioridades");
-  };
+  }, []);
 
-  const exportToPDF = () => {
+  // Optimizar la generación de PDF para evitar bloqueos
+  const exportToPDF = useCallback(() => {
     try {
       console.log("Iniciando generación de PDF de selección de plazas...");
       
@@ -262,57 +282,59 @@ export const useMunicipalitySelection = () => {
         return;
       }
       
-      const doc = new jsPDF();
-      
-      doc.setFontSize(18);
-      doc.text('Selección de Plazas', 14, 22);
-      
-      doc.setFontSize(11);
-      doc.text(`Aspirante: ${aspirante.nombre}`, 14, 30);
-      doc.text(`Cédula: ${aspirante.cedula}`, 14, 36);
-      doc.text(`Puesto: ${aspirante.puesto}`, 14, 42);
-      doc.text(`Fecha de selección: ${new Date().toLocaleDateString()}`, 14, 48);
-      
-      const prioridadesSeleccionadas = municipalitiesWithPriority.filter(item => item.prioridad > 0)
-        .sort((a, b) => a.prioridad - b.prioridad);
-      
-      const tableColumn = ['Prioridad', 'Municipio', 'Departamento', 'Vacantes'];
-      const tableRows = prioridadesSeleccionadas.map(item => [
-        item.prioridad,
-        item.municipio,
-        item.departamento,
-        item.vacantes
-      ]);
-      
-      autoTable(doc, {
-        head: [tableColumn],
-        body: tableRows,
-        startY: 55,
-        theme: 'striped',
-        styles: { fontSize: 10, cellPadding: 3 },
-        headStyles: { fillColor: [0, 48, 87], textColor: [255, 255, 255] }
+      // Usamos Promise.resolve().then para evitar bloqueo de la UI
+      Promise.resolve().then(() => {
+        const doc = new jsPDF();
+        
+        doc.setFontSize(18);
+        doc.text('Selección de Plazas', 14, 22);
+        
+        doc.setFontSize(11);
+        doc.text(`Aspirante: ${aspirante.nombre}`, 14, 30);
+        doc.text(`Cédula: ${aspirante.cedula}`, 14, 36);
+        doc.text(`Puesto: ${aspirante.puesto}`, 14, 42);
+        doc.text(`Fecha de selección: ${new Date().toLocaleDateString()}`, 14, 48);
+        
+        const prioridadesSeleccionadas = municipalitiesWithPriority
+          .filter(item => item.prioridad > 0)
+          .sort((a, b) => a.prioridad - b.prioridad);
+        
+        const tableColumn = ['Prioridad', 'Municipio', 'Departamento', 'Vacantes'];
+        const tableRows = prioridadesSeleccionadas.map(item => [
+          item.prioridad,
+          item.municipio,
+          item.departamento,
+          item.vacantes
+        ]);
+        
+        autoTable(doc, {
+          head: [tableColumn],
+          body: tableRows,
+          startY: 55,
+          theme: 'striped',
+          styles: { fontSize: 10, cellPadding: 3 },
+          headStyles: { fillColor: [0, 48, 87], textColor: [255, 255, 255] }
+        });
+        
+        if (aspirante.plazaDeseada) {
+          const lastY = (doc as any).lastAutoTable.finalY || 60;
+          doc.text(`Plaza actualmente asignada: ${aspirante.plazaDeseada}`, 14, lastY + 10);
+        }
+        
+        // Abrir PDF en una nueva ventana en lugar de descargarlo
+        const pdfBlob = doc.output('blob');
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+        window.open(pdfUrl, '_blank');
+        
+        toast.success("El PDF se ha abierto en una nueva ventana");
       });
-      
-      if (aspirante.plazaDeseada) {
-        const lastY = (doc as any).lastAutoTable.finalY || 60;
-        doc.text(`Plaza actualmente asignada: ${aspirante.plazaDeseada}`, 14, lastY + 10);
-      }
-      
-      console.log("PDF de selección generado correctamente, procediendo a abrir en nueva ventana...");
-      
-      // Abrir PDF en una nueva ventana en lugar de descargarlo
-      const pdfBlob = doc.output('blob');
-      const pdfUrl = URL.createObjectURL(pdfBlob);
-      window.open(pdfUrl, '_blank');
-      
-      toast.success("El PDF se ha abierto en una nueva ventana");
       
     } catch (error) {
       console.error("Error al generar el PDF:", error);
       const errorMessage = error instanceof Error ? error.message : "Error desconocido";
       toast.error(`Error al generar el PDF: ${errorMessage}`);
     }
-  };
+  }, [cedula, municipalitiesWithPriority]);
 
   return {
     municipalitiesWithPriority,

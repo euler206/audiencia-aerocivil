@@ -8,16 +8,7 @@ export const updatePlazaDeseada = async (cedula: string, plazaDeseada: string): 
   try {
     console.log(`Actualizando plaza deseada para aspirante ${cedula} a: ${plazaDeseada}`);
     
-    // Actualizar en el array local de aspirantes
-    const aspirante = aspirantes.find(a => a.cedula === cedula);
-    if (aspirante) {
-      aspirante.plazaDeseada = plazaDeseada;
-    } else {
-      console.error(`No se encontró el aspirante con cédula: ${cedula}`);
-      return false;
-    }
-    
-    // Actualizar en Supabase
+    // Actualizar primero en Supabase para evitar bloqueo de UI
     const { error } = await supabase
       .from('aspirantes')
       .update({ plaza_deseada: plazaDeseada })
@@ -25,6 +16,15 @@ export const updatePlazaDeseada = async (cedula: string, plazaDeseada: string): 
       
     if (error) {
       console.error("Error al actualizar plaza deseada en Supabase:", error);
+      return false;
+    }
+    
+    // Luego actualizar en el array local de aspirantes
+    const aspiranteIndex = aspirantes.findIndex(a => a.cedula === cedula);
+    if (aspiranteIndex >= 0) {
+      aspirantes[aspiranteIndex].plazaDeseada = plazaDeseada;
+    } else {
+      console.error(`No se encontró el aspirante con cédula: ${cedula}`);
       return false;
     }
     
@@ -41,13 +41,31 @@ export const updateAllPlazasDeseadas = async (): Promise<boolean> => {
   try {
     console.log("Actualizando todas las plazas deseadas...");
     
-    // 1. Actualizar todos los aspirantes en el array local
-    for (const aspirante of aspirantes) {
-      aspirante.plazaDeseada = "";
+    // Obtener directamente los datos desde Supabase en vez de manipular el array local
+    const { data: supabaseAspirantes, error } = await supabase
+      .from('aspirantes')
+      .select('cedula, plaza_deseada');
+      
+    if (error) {
+      console.error("Error al obtener datos de Supabase:", error);
+      return false;
     }
     
-    // 2. Recargar datos desde Supabase
-    await loadFromLocalStorage();
+    // Actualizar el array local con los datos de Supabase de manera más eficiente
+    if (supabaseAspirantes) {
+      // Crear un mapa para búsqueda rápida por cédula
+      const plazasMap = new Map();
+      supabaseAspirantes.forEach(a => {
+        plazasMap.set(a.cedula, a.plaza_deseada || "");
+      });
+      
+      // Actualizar solo las plazas que han cambiado
+      for (const aspirante of aspirantes) {
+        if (plazasMap.has(aspirante.cedula)) {
+          aspirante.plazaDeseada = plazasMap.get(aspirante.cedula);
+        }
+      }
+    }
     
     console.log("Plazas deseadas actualizadas correctamente");
     return true;

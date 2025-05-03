@@ -50,4 +50,4 @@ const MunicipalitySelection: React.FC = () => {
   );
 };
 
-export default MunicipalitySelection;
+export default React.memo(MunicipalitySelection);

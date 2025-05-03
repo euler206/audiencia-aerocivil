@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import MunicipalityCard from './MunicipalityCard';
 
 interface PriorityMunicipality {
@@ -22,13 +22,26 @@ const MunicipalityGrid: React.FC<MunicipalityGridProps> = ({
   aspirantes,
   onSetPriority
 }) => {
+  // Crear un mapa para calcular rápidamente los aspirantes por plaza
+  const aspirantesPorPlaza = useMemo(() => {
+    const plazaMap = new Map<string, number>();
+    
+    // Solo procesar los aspirantes relevantes (con mejor puesto)
+    aspirantes
+      .filter(a => a.plazaDeseada && a.puesto < aspirantePuesto)
+      .forEach(a => {
+        const count = plazaMap.get(a.plazaDeseada) || 0;
+        plazaMap.set(a.plazaDeseada, count + 1);
+      });
+      
+    return plazaMap;
+  }, [aspirantes, aspirantePuesto]);
+  
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
       {municipalities.map((plaza) => {
-        // Calcular cuántos aspirantes con mejor puesto han seleccionado esta plaza
-        const aspirantesConMejorPuesto = aspirantes.filter(
-          a => a.plazaDeseada === plaza.municipio && a.puesto < aspirantePuesto
-        ).length;
+        // Usar el mapa para obtener aspirantes con mejor puesto
+        const aspirantesConMejorPuesto = aspirantesPorPlaza.get(plaza.municipio) || 0;
         const disponible = aspirantesConMejorPuesto < plaza.vacantes;
         
         return (
@@ -48,4 +61,4 @@ const MunicipalityGrid: React.FC<MunicipalityGridProps> = ({
   );
 };
 
-export default MunicipalityGrid;
+export default React.memo(MunicipalityGrid);
