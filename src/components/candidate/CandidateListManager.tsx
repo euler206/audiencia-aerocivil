@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Aspirante } from '@/lib';
 import jsPDF from 'jspdf';
@@ -34,10 +33,8 @@ const CandidateListManager: React.FC<CandidateListManagerProps> = ({
     setSearch(searchTerm);
     
     if (searchTerm.trim() === '') {
-      // Cuando se limpia la búsqueda, mostrar los aspirantes ordenados por puesto
       onSearchChange([...aspirantes].sort((a, b) => a.puesto - b.puesto));
     } else {
-      // Filtrar por término de búsqueda y luego ordenar por puesto
       const filtered = aspirantes.filter(
         (aspirante) =>
           aspirante.nombre.toLowerCase().includes(searchTerm) ||
@@ -49,22 +46,18 @@ const CandidateListManager: React.FC<CandidateListManagerProps> = ({
     }
   };
 
-  // Función para exportar a PDF
   const exportToPDF = () => {
     try {
       console.log("Iniciando generación de PDF...");
       const doc = new jsPDF();
       
-      // Título del documento
       doc.setFontSize(18);
       doc.text('Lista de Aspirantes', 14, 22);
       
-      // Información del documento
       doc.setFontSize(11);
       doc.text('SIMULACRO AUDIENCIA PUBLICA - AERONAUTICA CIVIL - OPEC 209961', 14, 30);
       doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 14, 36);
       
-      // Preparar los datos para la tabla
       const tableColumn = ['Puesto', 'Puntaje', isAdmin ? 'Cédula' : '', 'Nombre', 'Plaza Deseada'];
       const tableRows = aspirantes.map(aspirante => {
         const data = [
@@ -75,11 +68,13 @@ const CandidateListManager: React.FC<CandidateListManagerProps> = ({
           aspirante.plazaDeseada || 'No seleccionada'
         ];
         
-        // Si no es admin, filtrar la columna de cédula
-        return isAdmin ? data : data.filter((_, index) => index !== 2);
+        if (!isAdmin) {
+          data.splice(2, 1);
+        }
+        
+        return data;
       });
       
-      // Configurar y generar la tabla
       autoTable(doc, {
         head: [isAdmin ? tableColumn : tableColumn.filter(col => col !== '')],
         body: tableRows,
@@ -91,7 +86,6 @@ const CandidateListManager: React.FC<CandidateListManagerProps> = ({
       
       console.log("PDF generado correctamente, procediendo a abrir en nueva ventana...");
       
-      // Abrir PDF en una nueva ventana en lugar de descargarlo
       const pdfBlob = doc.output('blob');
       const pdfUrl = URL.createObjectURL(pdfBlob);
       window.open(pdfUrl, '_blank');
@@ -111,18 +105,19 @@ const CandidateListManager: React.FC<CandidateListManagerProps> = ({
     }
   };
 
-  // Manejador para borrar selecciones
   const handleClearAllSelections = () => {
     setIsConfirmDialogOpen(true);
   };
 
-  const confirmClearAllSelections = async () => {
+  const confirmClearAllSelections = async (): Promise<boolean> => {
     try {
-      await onSelectionsClear();
+      const result = await onSelectionsClear();
+      setIsConfirmDialogOpen(false);
+      return result;
     } catch (error) {
       console.error("Error al borrar selecciones:", error);
-    } finally {
       setIsConfirmDialogOpen(false);
+      return false;
     }
   };
 
