@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 interface ClearSelectionsDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: () => void;
+  onConfirm: () => Promise<boolean>;
 }
 
 const ClearSelectionsDialog: React.FC<ClearSelectionsDialogProps> = ({
@@ -27,12 +27,17 @@ const ClearSelectionsDialog: React.FC<ClearSelectionsDialogProps> = ({
 
   const handleConfirm = async () => {
     try {
-      await onConfirm();
-      toast({
-        title: "Operación exitosa",
-        description: "Todas las selecciones han sido eliminadas correctamente",
-        variant: "default"
-      });
+      const result = await onConfirm();
+      
+      if (result) {
+        toast({
+          title: "Operación exitosa",
+          description: "Todas las selecciones han sido eliminadas correctamente",
+          variant: "default"
+        });
+      } else {
+        throw new Error("No se pudieron eliminar las selecciones");
+      }
     } catch (error) {
       console.error("Error al confirmar borrado de selecciones:", error);
       toast({

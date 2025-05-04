@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Aspirante, loadFromLocalStorage, aspirantes } from '@/lib';
@@ -63,7 +62,7 @@ const CandidateList: React.FC = () => {
           description: "Solo administradores pueden realizar esta acción",
           variant: "destructive"
         });
-        return;
+        return false;
       }
 
       const success = await clearAllSelections();
@@ -71,19 +70,17 @@ const CandidateList: React.FC = () => {
       
       if (success) {
         // Recargar datos y actualizar la interfaz
+        await loadFromLocalStorage();
         setRefreshTrigger(prev => prev + 1);
         
-        toast({
-          title: "Operación exitosa",
-          description: "Se han eliminado todas las selecciones de plazas",
-          variant: "default"
-        });
+        return true;
       } else {
         toast({
           title: "Error",
           description: "No se pudieron eliminar las selecciones",
           variant: "destructive"
         });
+        return false;
       }
     } catch (error) {
       console.error("Error al borrar selecciones:", error);
@@ -92,6 +89,7 @@ const CandidateList: React.FC = () => {
         description: "Ocurrió un error al procesar la solicitud",
         variant: "destructive"
       });
+      return false;
     }
   };
 

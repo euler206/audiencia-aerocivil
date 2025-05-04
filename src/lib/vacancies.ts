@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { aspirantes } from './aspirantes';
 import { loadFromLocalStorage } from './storage';
@@ -92,7 +91,8 @@ export const clearAllSelections = async (): Promise<boolean> => {
     // 1. Actualizar en Supabase: limpiar plazas deseadas
     const { error: updateError } = await supabase
       .from('aspirantes')
-      .update({ plaza_deseada: null });
+      .update({ plaza_deseada: null })
+      .is('plaza_deseada', '!null');
       
     if (updateError) {
       console.error("Error al limpiar plazas en Supabase:", updateError);
@@ -102,7 +102,8 @@ export const clearAllSelections = async (): Promise<boolean> => {
     // 2. Eliminar todas las prioridades
     const { error: deleteError } = await supabase
       .from('prioridades')
-      .delete();
+      .delete()
+      .not('aspirante_id', 'is', null);
       
     if (deleteError) {
       console.error("Error al eliminar prioridades en Supabase:", deleteError);
