@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
 
 const Header: React.FC = () => {
-  const { currentUser, logout, isAdmin } = useAuth();
+  const { currentUser, logout, isAdmin, cedula } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {

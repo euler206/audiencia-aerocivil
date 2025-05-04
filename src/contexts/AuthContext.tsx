@@ -3,10 +3,19 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { getAspiranteByCredentials } from '@/lib/aspirantes';
 import { clearAllSelections } from '@/lib/vacancies';
 
+// Defining an interface for the aspirante/user data
+interface CurrentUser {
+  cedula: string;
+  nombre: string;
+  puntaje: number;
+  puesto: number;
+}
+
 interface AuthContextType {
   isAuthenticated: boolean;
   isAdmin: boolean;
   cedula: string | null;
+  currentUser: CurrentUser | null;
   login: (cedula: string, opec: string) => Promise<boolean>;
   logout: () => void;
   verifyIdentity: (cedula: string) => boolean;
@@ -19,6 +28,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [cedula, setCedula] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
 
   useEffect(() => {
     console.info('AuthProvider inicializando...');
@@ -33,6 +43,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (savedCedula === 'admin') {
         console.info('Usuario detectado como administrador');
         setIsAdmin(true);
+      } else {
+        // Cargar datos del usuario si no es admin
+        getAspiranteByCredentials(savedCedula, '209961')
+          .then(aspirante => {
+            if (aspirante) {
+              setCurrentUser({
+                cedula: aspirante.cedula,
+                nombre: aspirante.nombre,
+                puntaje: aspirante.puntaje,
+                puesto: aspirante.puesto
+              });
+            }
+          })
+          .catch(error => console.error('Error al cargar datos del usuario:', error));
       }
     }
   }, []);
@@ -47,6 +71,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setCedula('admin');
         setIsAuthenticated(true);
         setIsAdmin(true);
+        setCurrentUser(null); // Admin no tiene datos de usuario
         localStorage.setItem('cedula', 'admin');
         return true;
       }
@@ -58,6 +83,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setCedula(cedulaInput);
         setIsAuthenticated(true);
         setIsAdmin(false);
+        setCurrentUser({
+          cedula: aspirante.cedula,
+          nombre: aspirante.nombre,
+          puntaje: aspirante.puntaje,
+          puesto: aspirante.puesto
+        });
         localStorage.setItem('cedula', cedulaInput);
         return true;
       }
@@ -72,6 +103,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Función para cerrar sesión
   const logout = () => {
     setCedula(null);
+    setCurrentUser(null);
     setIsAuthenticated(false);
     setIsAdmin(false);
     localStorage.removeItem('cedula');
@@ -102,6 +134,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       isAuthenticated,
       isAdmin,
       cedula,
+      currentUser,
       login,
       logout,
       verifyIdentity,
@@ -119,4 +152,3 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
-
