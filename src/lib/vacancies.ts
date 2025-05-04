@@ -89,7 +89,7 @@ export const clearAllSelections = async (): Promise<boolean> => {
   try {
     console.log("Limpiando todas las selecciones de plazas...");
     
-    // 1. Actualizar en Supabase
+    // 1. Actualizar en Supabase: limpiar plazas deseadas
     const { error: updateError } = await supabase
       .from('aspirantes')
       .update({ plaza_deseada: null });
@@ -114,7 +114,7 @@ export const clearAllSelections = async (): Promise<boolean> => {
       aspirante.plazaDeseada = "";
     }
     
-    // 4. Limpiar localStorage
+    // 4. Limpiar localStorage de prioridades
     for (const aspirante of aspirantes) {
       localStorage.removeItem(`prioridades_${aspirante.cedula}`);
     }

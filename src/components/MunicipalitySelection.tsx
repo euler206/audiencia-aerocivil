@@ -1,11 +1,12 @@
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useMunicipalitySelection } from './municipality/useMunicipalitySelection';
 import MunicipalityActions from './municipality/MunicipalityActions';
 import PriorityLegend from './municipality/PriorityLegend';
 import MunicipalityGrid from './municipality/MunicipalityGrid';
-import { aspirantes } from '@/lib';
+import { aspirantes, loadFromLocalStorage } from '@/lib';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 const MunicipalitySelection: React.FC = () => {
   const { isAdmin } = useAuth();
@@ -19,6 +20,20 @@ const MunicipalitySelection: React.FC = () => {
     handleReset,
     exportToPDF
   } = useMunicipalitySelection(isAdmin);
+
+  // Cargar datos iniciales al montar el componente
+  useEffect(() => {
+    const initData = async () => {
+      try {
+        await loadFromLocalStorage();
+      } catch (error) {
+        console.error("Error loading initial data:", error);
+        toast.error("Error al cargar datos iniciales");
+      }
+    };
+    
+    initData();
+  }, []);
 
   // Memorizar la función de manipulación de prioridad para evitar recreaciones
   const handlePriorityChange = useCallback((municipio: string) => {

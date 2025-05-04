@@ -4,12 +4,24 @@ import Header from '@/components/Header';
 import MunicipalitySelection from '@/components/MunicipalitySelection';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate, useParams } from 'react-router-dom';
+import { loadFromLocalStorage } from '@/lib/storage';
 
 const MunicipalityPage: React.FC = () => {
   const { isAuthenticated, verifyIdentity } = useAuth();
   const { cedula } = useParams<{ cedula: string }>();
 
   useEffect(() => {
+    // Cargar datos desde localStorage/Supabase al inicio
+    const loadInitialData = async () => {
+      try {
+        await loadFromLocalStorage();
+      } catch (error) {
+        console.error("Error al cargar datos iniciales:", error);
+      }
+    };
+    
+    loadInitialData();
+    
     // Añadir un log para depuración
     console.log("MunicipalityPage renderizado:", { isAuthenticated, cedula });
   }, [isAuthenticated, cedula]);

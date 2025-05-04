@@ -25,9 +25,22 @@ const ClearSelectionsDialog: React.FC<ClearSelectionsDialogProps> = ({
 }) => {
   const { toast } = useToast();
 
-  const handleConfirm = () => {
-    onConfirm();
-    // El diálogo se cerrará automáticamente después de llamar a onConfirm
+  const handleConfirm = async () => {
+    try {
+      await onConfirm();
+      toast({
+        title: "Operación exitosa",
+        description: "Todas las selecciones han sido eliminadas correctamente",
+        variant: "default"
+      });
+    } catch (error) {
+      console.error("Error al confirmar borrado de selecciones:", error);
+      toast({
+        title: "Error",
+        description: "No se pudieron eliminar las selecciones",
+        variant: "destructive"
+      });
+    }
   };
 
   return (

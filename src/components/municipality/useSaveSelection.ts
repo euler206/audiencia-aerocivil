@@ -28,6 +28,7 @@ export const useSaveSelection = (
     try {
       const priorities: Prioridad[] = municipalitiesWithPriority
         .filter(item => item.prioridad > 0)
+        .sort((a, b) => a.prioridad - b.prioridad) // Ordenar por prioridad
         .map(item => ({ municipio: item.municipio, prioridad: item.prioridad }));
       
       if (priorities.length === 0 && !isAdmin) {
