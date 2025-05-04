@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Aspirante, loadFromLocalStorage, aspirantes } from '@/lib';
+import { clearAllSelections } from '@/lib/vacancies';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,7 +14,7 @@ import CandidateTable from './candidate/CandidateTable';
 const CandidateList: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isAdmin, clearAllSelections } = useAuth();
+  const { isAdmin } = useAuth();
   const [displayedAspirantes, setDisplayedAspirantes] = useState<Aspirante[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -56,6 +57,15 @@ const CandidateList: React.FC = () => {
   const handleClearAllSelections = async () => {
     console.log("Iniciando proceso de borrado de selecciones...");
     try {
+      if (!isAdmin) {
+        toast({
+          title: "Acceso denegado",
+          description: "Solo administradores pueden realizar esta acción",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const success = await clearAllSelections();
       console.log("Resultado del borrado:", success);
       
@@ -71,7 +81,7 @@ const CandidateList: React.FC = () => {
       } else {
         toast({
           title: "Error",
-          description: "No se pudieron eliminar las selecciones o no tienes permiso para esta acción",
+          description: "No se pudieron eliminar las selecciones",
           variant: "destructive"
         });
       }

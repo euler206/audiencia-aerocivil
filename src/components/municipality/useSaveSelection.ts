@@ -4,13 +4,14 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { updatePlazaDeseada } from '@/lib/vacancies';
-import { getAvailablePlazaByPriority } from '@/lib';
-import { PriorityMunicipality, Priority } from './types';
+import { getAvailablePlazaByPriority, recalculateAllPlacements, Prioridad } from '@/lib/prioridades';
+import { PriorityMunicipality } from './types';
 
 export const useSaveSelection = (
   municipalitiesWithPriority: PriorityMunicipality[],
   aspirantePuesto: number,
-  cedula: string | undefined
+  cedula: string | undefined,
+  isAdmin: boolean = false
 ) => {
   const [isSaving, setIsSaving] = useState(false);
   const navigate = useNavigate();
@@ -25,11 +26,11 @@ export const useSaveSelection = (
     setIsSaving(true);
     
     try {
-      const priorities: Priority[] = municipalitiesWithPriority
+      const priorities: Prioridad[] = municipalitiesWithPriority
         .filter(item => item.prioridad > 0)
         .map(item => ({ municipio: item.municipio, prioridad: item.prioridad }));
       
-      if (priorities.length === 0) {
+      if (priorities.length === 0 && !isAdmin) {
         toast.error('Debe seleccionar al menos una plaza');
         setIsSaving(false);
         return;
@@ -60,44 +61,40 @@ export const useSaveSelection = (
         return;
       }
       
-      // 4. Insertar nuevas prioridades
-      const { error: insertError } = await supabase
-        .from('prioridades')
-        .insert(prioridadesSupabase);
-      
-      if (insertError) {
-        console.error("Error al guardar prioridades en Supabase:", insertError);
-        toast.error("Error al guardar prioridades en la base de datos");
-        setIsSaving(false);
-        return;
+      // 4. Insertar nuevas prioridades (solo si hay alguna)
+      if (prioridadesSupabase.length > 0) {
+        const { error: insertError } = await supabase
+          .from('prioridades')
+          .insert(prioridadesSupabase);
+        
+        if (insertError) {
+          console.error("Error al guardar prioridades en Supabase:", insertError);
+          toast.error("Error al guardar prioridades en la base de datos");
+          setIsSaving(false);
+          return;
+        }
       }
       
-      // 5. Calcular plaza disponible (usando función optimizada)
-      const selectedPlaza = getAvailablePlazaByPriority(priorities, aspirantePuesto);
-      
-      if (!selectedPlaza) {
-        toast.error('No hay plazas disponibles según sus prioridades');
-        setIsSaving(false);
-        return;
-      }
-      
-      // 6. Actualizar plaza deseada (operación optimizada)
-      const success = await updatePlazaDeseada(cedula, selectedPlaza);
-      
-      if (success) {
-        toast.success(`Plaza asignada: ${selectedPlaza}`);
+      // Si es administrador y no seleccionó plazas, simplemente redirigir sin asignar
+      if (priorities.length === 0 && isAdmin) {
+        toast.success('Guardado realizado correctamente');
         navigate('/dashboard');
-      } else {
-        toast.error('Error al asignar la plaza');
+        setIsSaving(false);
+        return;
       }
       
+      // 5. Recalcular todas las asignaciones de plazas
+      await recalculateAllPlacements();
+      
+      toast.success('Selección guardada correctamente');
+      navigate('/dashboard');
     } catch (error) {
       console.error("Error en el proceso de guardado:", error);
       toast.error("Error al guardar la selección");
     } finally {
       setIsSaving(false);
     }
-  }, [municipalitiesWithPriority, aspirantePuesto, cedula, navigate]);
+  }, [municipalitiesWithPriority, aspirantePuesto, cedula, navigate, isAdmin]);
 
   return {
     isSaving,

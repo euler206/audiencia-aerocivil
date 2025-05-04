@@ -39,6 +39,8 @@ export const useLoadMunicipalityData = () => {
           return;
         }
         
+        // El número de prioridades que puede seleccionar está determinado por su puesto
+        // Un aspirante en puesto 10 puede seleccionar 10 prioridades
         setAspirantePuesto(aspirante.puesto);
         setMaxPrioridades(aspirante.puesto);
         console.log(`Aspirante ${cedula} en puesto ${aspirante.puesto}, puede seleccionar ${aspirante.puesto} prioridades`);
@@ -65,7 +67,8 @@ export const useLoadMunicipalityData = () => {
           
           const updatedMunicipalities = initialMunicipalities.map(m => ({
             ...m,
-            prioridad: prioridadesMap.get(m.municipio) || 0
+            // Asegurarse de que prioridad sea siempre un número
+            prioridad: prioridadesMap.has(m.municipio) ? Number(prioridadesMap.get(m.municipio)) : 0
           })) as PriorityMunicipality[];
           
           setMunicipalitiesWithPriority(updatedMunicipalities);
@@ -86,7 +89,7 @@ export const useLoadMunicipalityData = () => {
             
             const updatedMunicipalities = initialMunicipalities.map(m => ({
               ...m,
-              prioridad: Number(prioridadesMap.get(m.municipio)) || 0
+              prioridad: prioridadesMap.has(m.municipio) ? Number(prioridadesMap.get(m.municipio)) : 0
             })) as PriorityMunicipality[];
             
             setMunicipalitiesWithPriority(updatedMunicipalities);

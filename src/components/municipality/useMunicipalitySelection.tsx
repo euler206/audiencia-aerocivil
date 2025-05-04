@@ -3,8 +3,9 @@ import { useLoadMunicipalityData } from './useLoadMunicipalityData';
 import { usePriorityActions } from './usePriorityActions';
 import { usePDFExport } from './usePDFExport';
 import { useSaveSelection } from './useSaveSelection';
+import { useAuth } from '@/contexts/AuthContext';
 
-export const useMunicipalitySelection = () => {
+export const useMunicipalitySelection = (isAdmin: boolean = false) => {
   const {
     municipalitiesWithPriority,
     setMunicipalitiesWithPriority,
@@ -25,7 +26,8 @@ export const useMunicipalitySelection = () => {
   const { isSaving, handleSaveSelection } = useSaveSelection(
     municipalitiesWithPriority,
     aspirantePuesto,
-    cedula
+    cedula,
+    isAdmin
   );
 
   return {

@@ -3,7 +3,7 @@ import { aspirantes } from './aspirantes';
 import { plazas } from './plazas';
 
 // Tipo para representar una prioridad
-interface Prioridad {
+export interface Prioridad {
   municipio: string;
   prioridad: number;
 }
@@ -13,6 +13,9 @@ export const getAvailablePlazaByPriority = (
   prioridades: Prioridad[],
   aspirantePuesto: number
 ): string | null => {
+  // Si no hay prioridades, devolver null
+  if (!prioridades || prioridades.length === 0) return null;
+
   // Crear un mapa para consulta rápida de plazas
   const plazasMap = new Map(plazas.map(p => [p.municipio, p.vacantes]));
   
@@ -47,4 +50,89 @@ export const getAvailablePlazaByPriority = (
   
   // Si ninguna de las plazas priorizadas está disponible, devolver null
   return null;
+};
+
+// Función para reordenar todas las asignaciones de plazas después de cambios
+export const recalculateAllPlacements = async () => {
+  console.log("Recalculando todas las asignaciones de plazas...");
+  
+  // Primero, ordenar aspirantes por puesto (menor número = mayor prioridad)
+  const sortedAspirantes = [...aspirantes].sort((a, b) => a.puesto - b.puesto);
+  
+  // Mapa para llevar el conteo de ocupación de plazas
+  const plazaOccupation = new Map<string, number>();
+  
+  // Recorrer aspirantes en orden de prioridad
+  for (const aspirante of sortedAspirantes) {
+    console.log(`Procesando aspirante: ${aspirante.nombre} (Puesto: ${aspirante.puesto})`);
+    
+    // Obtener las prioridades del aspirante desde localStorage o base de datos
+    const prioridadesString = localStorage.getItem(`prioridades_${aspirante.cedula}`);
+    if (!prioridadesString) {
+      console.log(`No hay prioridades almacenadas para ${aspirante.cedula}, continuando...`);
+      continue; // Si no tiene prioridades, continuar con el siguiente
+    }
+    
+    const prioridades = JSON.parse(prioridadesString);
+    if (!prioridades || prioridades.length === 0) {
+      console.log(`Prioridades vacías para ${aspirante.cedula}, continuando...`);
+      continue;
+    }
+    
+    // Calcular la plaza disponible según prioridades
+    const nuevaPlaza = getAvailablePlazaByPriority(prioridades, aspirante.puesto);
+    
+    if (nuevaPlaza) {
+      console.log(`Asignando plaza: ${nuevaPlaza} a ${aspirante.nombre}`);
+      
+      // Actualizar plazaDeseada en el objeto aspirante
+      aspirante.plazaDeseada = nuevaPlaza;
+      
+      // Incrementar conteo de ocupación
+      const currentOccupation = plazaOccupation.get(nuevaPlaza) || 0;
+      plazaOccupation.set(nuevaPlaza, currentOccupation + 1);
+      
+      // Actualizar en base de datos
+      try {
+        const { error } = await import('@/integrations/supabase/client').then(
+          ({ supabase }) => supabase
+            .from('aspirantes')
+            .update({ plaza_deseada: nuevaPlaza })
+            .eq('cedula', aspirante.cedula)
+        );
+        
+        if (error) {
+          console.error(`Error al actualizar plaza para ${aspirante.cedula}:`, error);
+        }
+      } catch (error) {
+        console.error(`Error en actualización de base de datos para ${aspirante.cedula}:`, error);
+      }
+    } else {
+      console.log(`No hay plazas disponibles para ${aspirante.nombre} según sus prioridades`);
+      
+      // Si no hay plaza disponible, borrar su selección actual
+      if (aspirante.plazaDeseada) {
+        aspirante.plazaDeseada = "";
+        
+        // Actualizar en base de datos
+        try {
+          const { error } = await import('@/integrations/supabase/client').then(
+            ({ supabase }) => supabase
+              .from('aspirantes')
+              .update({ plaza_deseada: null })
+              .eq('cedula', aspirante.cedula)
+          );
+          
+          if (error) {
+            console.error(`Error al limpiar plaza para ${aspirante.cedula}:`, error);
+          }
+        } catch (error) {
+          console.error(`Error en limpieza de plaza para ${aspirante.cedula}:`, error);
+        }
+      }
+    }
+  }
+  
+  console.log("Recalculación de plazas completada");
+  return true;
 };

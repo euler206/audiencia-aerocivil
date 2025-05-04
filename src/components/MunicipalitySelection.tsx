@@ -5,8 +5,10 @@ import MunicipalityActions from './municipality/MunicipalityActions';
 import PriorityLegend from './municipality/PriorityLegend';
 import MunicipalityGrid from './municipality/MunicipalityGrid';
 import { aspirantes } from '@/lib';
+import { useAuth } from '@/contexts/AuthContext';
 
 const MunicipalitySelection: React.FC = () => {
+  const { isAdmin } = useAuth();
   const {
     municipalitiesWithPriority,
     aspirantePuesto,
@@ -16,7 +18,7 @@ const MunicipalitySelection: React.FC = () => {
     handleSaveSelection,
     handleReset,
     exportToPDF
-  } = useMunicipalitySelection();
+  } = useMunicipalitySelection(isAdmin);
 
   // Memorizar la función de manipulación de prioridad para evitar recreaciones
   const handlePriorityChange = useCallback((municipio: string) => {
