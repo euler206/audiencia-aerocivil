@@ -66,8 +66,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       console.log(`Intentando login con cédula: ${cedulaInput}, OPEC: ${opec}`);
       
-      // Caso especial para admin
-      if (cedulaInput === 'admin') {
+      // Caso especial para admin - CORRECCIÓN: verificar tanto el usuario como la contraseña
+      if (cedulaInput === 'admin' && opec === '87453609') {
         setCedula('admin');
         setIsAuthenticated(true);
         setIsAdmin(true);
@@ -76,7 +76,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return true;
       }
       
-      // Verificar credenciales
+      // Verificar credenciales para usuarios normales
       const aspirante = await getAspiranteByCredentials(cedulaInput, opec);
       
       if (aspirante) {

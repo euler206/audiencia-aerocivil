@@ -25,6 +25,13 @@ const LoginForm: React.FC = () => {
       
       console.log("Intentando login con:", cedulaString, opecString);
       
+      // Mensaje de error específico para intentos fallidos de login como admin
+      if (cedulaString === 'admin' && opecString !== '87453609') {
+        toast.error('Contraseña de administrador incorrecta.');
+        setIsLoading(false);
+        return;
+      }
+      
       const success = await login(cedulaString, opecString);
       
       if (success) {
