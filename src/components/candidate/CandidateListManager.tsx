@@ -11,7 +11,7 @@ import ClearSelectionsDialog from './ClearSelectionsDialog';
 interface CandidateListManagerProps {
   aspirantes: Aspirante[];
   isAdmin: boolean;
-  onSelectionsClear: () => Promise<void>;
+  onSelectionsClear: () => Promise<boolean>;
   onSearchChange: (filteredAspirantes: Aspirante[]) => void;
 }
 

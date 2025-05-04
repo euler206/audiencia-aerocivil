@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { aspirantes } from './aspirantes';
 import { loadFromLocalStorage } from './storage';
@@ -92,7 +93,7 @@ export const clearAllSelections = async (): Promise<boolean> => {
     const { error: updateError } = await supabase
       .from('aspirantes')
       .update({ plaza_deseada: null })
-      .is('plaza_deseada', '!null');
+      .not('plaza_deseada', 'is', null);
       
     if (updateError) {
       console.error("Error al limpiar plazas en Supabase:", updateError);

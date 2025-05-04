@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Aspirante, loadFromLocalStorage, aspirantes } from '@/lib';
@@ -53,7 +54,7 @@ const CandidateList: React.FC = () => {
   };
 
   // Manejar la limpieza de todas las selecciones
-  const handleClearAllSelections = async () => {
+  const handleClearAllSelections = async (): Promise<boolean> => {
     console.log("Iniciando proceso de borrado de selecciones...");
     try {
       if (!isAdmin) {
