@@ -7,6 +7,7 @@ import MunicipalityGrid from './municipality/MunicipalityGrid';
 import { aspirantes, loadFromLocalStorage } from '@/lib';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { LoaderCircle } from 'lucide-react';
 
 const MunicipalitySelection: React.FC = () => {
   const { isAdmin } = useAuth();
@@ -52,7 +53,20 @@ const MunicipalitySelection: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="container mx-auto px-4 py-6 relative">
+      {isSaving && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg text-center max-w-md mx-auto">
+            <LoaderCircle className="h-12 w-12 animate-spin text-aeronautica mx-auto mb-4" />
+            <h3 className="text-xl font-bold mb-2">Procesando selección</h3>
+            <p className="text-gray-600">
+              Guardando sus prioridades y recalculando asignaciones. 
+              Este proceso puede tardar unos momentos, por favor espere...
+            </p>
+          </div>
+        </div>
+      )}
+      
       <MunicipalityActions 
         onExportToPDF={exportToPDF} 
         onReset={handleReset} 
