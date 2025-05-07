@@ -26,10 +26,10 @@ const CandidateTableRow: React.FC<CandidateTableRowProps> = ({
 }) => {
   const [isPositionDialogOpen, setIsPositionDialogOpen] = useState(false);
   const plazaLlena = plazaSeleccionada && aspirantesConMismaPlaza >= plazaSeleccionada.vacantes;
-  const { user } = useAuth();
+  const { currentUser, cedula } = useAuth();
   
   // Verificar si el botón de selección de plaza debe estar habilitado
-  const isSelectButtonEnabled = isAdmin || (user && user.cedula === aspirante.cedula);
+  const isSelectButtonEnabled = isAdmin || (cedula === aspirante.cedula);
 
   return (
     <TableRow>
