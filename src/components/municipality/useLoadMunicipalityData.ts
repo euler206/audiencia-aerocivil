@@ -9,20 +9,11 @@ import { PriorityMunicipality } from './types';
 
 export const useLoadMunicipalityData = () => {
   const { cedula } = useParams<{ cedula: string }>();
-  const { verifyIdentity } = useAuth();
   const navigate = useNavigate();
   const [municipalitiesWithPriority, setMunicipalitiesWithPriority] = useState<PriorityMunicipality[]>([]);
   const [aspirantePuesto, setAspirantePuesto] = useState(0);
   const [maxPrioridades, setMaxPrioridades] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
-  
-  // Verificar que el usuario tenga acceso a esta página
-  useEffect(() => {
-    if (cedula && !verifyIdentity(cedula)) {
-      toast.error("No tienes permiso para acceder a esta página");
-      navigate('/dashboard');
-    }
-  }, [cedula, navigate, verifyIdentity]);
 
   // Cargar datos iniciales de forma optimizada
   useEffect(() => {
@@ -125,7 +116,7 @@ export const useLoadMunicipalityData = () => {
     if (cedula) {
       loadData();
     }
-  }, [cedula, verifyIdentity]);
+  }, [cedula]);
 
   return {
     municipalitiesWithPriority,

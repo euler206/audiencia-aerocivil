@@ -7,7 +7,7 @@ import { Navigate, useParams } from 'react-router-dom';
 import { loadFromLocalStorage } from '@/lib/storage';
 
 const MunicipalityPage: React.FC = () => {
-  const { isAuthenticated, verifyIdentity } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { cedula } = useParams<{ cedula: string }>();
 
   useEffect(() => {
@@ -26,17 +26,9 @@ const MunicipalityPage: React.FC = () => {
     console.log("MunicipalityPage renderizado:", { isAuthenticated, cedula });
   }, [isAuthenticated, cedula]);
 
-  // Verificar si hay un cédula en la URL y si el usuario está autorizado
-  const isAuthorized = cedula ? verifyIdentity(cedula) : false;
-
   if (!isAuthenticated) {
     console.log("No autenticado, redirigiendo a página principal");
     return <Navigate to="/" replace />;
-  }
-
-  if (cedula && !isAuthorized) {
-    console.log("No autorizado para esta cédula, redirigiendo al dashboard");
-    return <Navigate to="/dashboard" replace />;
   }
 
   return (

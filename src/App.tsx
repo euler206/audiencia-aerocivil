@@ -7,7 +7,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
-import VacancyPage from "./pages/VacancyPage";
 import MunicipalityPage from "./pages/MunicipalityPage";
 import NotFound from "./pages/NotFound";
 
@@ -34,7 +33,6 @@ const App = () => {
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/select-vacancy/:cedula" element={<VacancyPage />} />
               <Route path="/municipality-selection/:cedula" element={<MunicipalityPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
