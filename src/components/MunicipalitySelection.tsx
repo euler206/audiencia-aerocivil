@@ -9,7 +9,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { LoaderCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Progress } from '@/components/ui/progress';
 
 const MunicipalitySelection: React.FC = () => {
   const { isAdmin } = useAuth();
@@ -67,11 +66,10 @@ const MunicipalitySelection: React.FC = () => {
           <div className="bg-white p-6 rounded-lg shadow-lg text-center max-w-md mx-auto">
             <LoaderCircle className="h-12 w-12 animate-spin text-aeronautica mx-auto mb-4" />
             <h3 className="text-xl font-bold mb-2">Procesando selección</h3>
-            <p className="text-gray-600 mb-4">
+            <p className="text-gray-600">
               Guardando sus prioridades y recalculando asignaciones. 
               Este proceso puede tardar unos momentos, por favor espere...
             </p>
-            <Progress value={100} className="h-2" />
           </div>
         </div>
       )}
