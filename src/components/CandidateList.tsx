@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Aspirante, loadFromLocalStorage, aspirantes } from '@/lib';
@@ -49,7 +50,7 @@ const CandidateList: React.FC = () => {
 
   // Manejar la selección de vacante
   const handleSelectVacancy = (cedula: string) => {
-    navigate(`/municipality-selection/${cedula}`);
+    navigate(`/select-vacancy/${cedula}`);
   };
 
   // Manejar la limpieza de todas las selecciones
