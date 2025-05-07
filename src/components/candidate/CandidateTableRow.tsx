@@ -5,6 +5,7 @@ import { Aspirante } from '@/lib';
 import { Plaza } from '@/lib/types';
 import { TableRow, TableCell } from "@/components/ui/table";
 import PositionChangeDialog from './PositionChangeDialog';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface CandidateTableRowProps {
   aspirante: Aspirante;
@@ -25,6 +26,10 @@ const CandidateTableRow: React.FC<CandidateTableRowProps> = ({
 }) => {
   const [isPositionDialogOpen, setIsPositionDialogOpen] = useState(false);
   const plazaLlena = plazaSeleccionada && aspirantesConMismaPlaza >= plazaSeleccionada.vacantes;
+  const { user } = useAuth();
+  
+  // Verificar si el botón de selección de plaza debe estar habilitado
+  const isSelectButtonEnabled = isAdmin || (user && user.cedula === aspirante.cedula);
 
   return (
     <TableRow>
@@ -46,7 +51,10 @@ const CandidateTableRow: React.FC<CandidateTableRowProps> = ({
           variant="outline" 
           size="sm"
           onClick={() => onSelectVacancy(aspirante.cedula)}
-          className="bg-aeronautica text-white hover:bg-aeronautica-light"
+          className={isSelectButtonEnabled 
+            ? "bg-aeronautica text-white hover:bg-aeronautica-light" 
+            : "bg-gray-300 text-gray-600 hover:bg-gray-300 cursor-not-allowed"}
+          disabled={!isSelectButtonEnabled}
         >
           Seleccionar Plaza
         </Button>

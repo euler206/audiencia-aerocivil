@@ -8,9 +8,11 @@ import { aspirantes, loadFromLocalStorage } from '@/lib';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { LoaderCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const MunicipalitySelection: React.FC = () => {
   const { isAdmin } = useAuth();
+  const navigate = useNavigate();
   const {
     municipalitiesWithPriority,
     aspirantePuesto,
@@ -40,6 +42,11 @@ const MunicipalitySelection: React.FC = () => {
   const handlePriorityChange = useCallback((municipio: string) => {
     handleSetPriority(municipio);
   }, [handleSetPriority]);
+
+  // Manejar la acción de cancelar y volver al dashboard
+  const handleCancel = useCallback(() => {
+    navigate('/dashboard');
+  }, [navigate]);
 
   if (isLoading) {
     return (
@@ -71,6 +78,7 @@ const MunicipalitySelection: React.FC = () => {
         onExportToPDF={exportToPDF} 
         onReset={handleReset} 
         onSave={handleSaveSelection}
+        onCancel={handleCancel}
         isLoading={isSaving}
       />
       

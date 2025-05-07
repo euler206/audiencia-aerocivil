@@ -1,12 +1,13 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { FileText } from 'lucide-react';
+import { FileText, X } from 'lucide-react';
 
 interface MunicipalityActionsProps {
   onExportToPDF: () => void;
   onReset: () => void;
   onSave: () => void;
+  onCancel: () => void;
   isLoading?: boolean;
 }
 
@@ -14,6 +15,7 @@ const MunicipalityActions: React.FC<MunicipalityActionsProps> = ({
   onExportToPDF,
   onReset,
   onSave,
+  onCancel,
   isLoading
 }) => {
   return (
@@ -45,6 +47,14 @@ const MunicipalityActions: React.FC<MunicipalityActionsProps> = ({
           disabled={isLoading}
         >
           {isLoading ? 'Guardando...' : 'Guardar selección'}
+        </Button>
+        <Button 
+          variant="outline"
+          className="border-gray-300 text-gray-700 hover:bg-gray-100" 
+          onClick={onCancel}
+        >
+          <X className="mr-2 h-4 w-4" />
+          Cancelar
         </Button>
       </div>
     </>
