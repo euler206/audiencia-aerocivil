@@ -4,7 +4,7 @@ import { useMunicipalitySelection } from './municipality/useMunicipalitySelectio
 import MunicipalityActions from './municipality/MunicipalityActions';
 import PriorityLegend from './municipality/PriorityLegend';
 import MunicipalityGrid from './municipality/MunicipalityGrid';
-import { aspirantes, loadFromLocalStorage } from '@/lib';
+import { aspirantes } from '@/lib';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { LoaderCircle } from 'lucide-react';
@@ -23,20 +23,6 @@ const MunicipalitySelection: React.FC = () => {
     handleReset,
     exportToPDF
   } = useMunicipalitySelection(isAdmin);
-
-  // Cargar datos iniciales al montar el componente
-  useEffect(() => {
-    const initData = async () => {
-      try {
-        await loadFromLocalStorage();
-      } catch (error) {
-        console.error("Error loading initial data:", error);
-        toast.error("Error al cargar datos iniciales");
-      }
-    };
-    
-    initData();
-  }, []);
 
   // Memorizar la función de manipulación de prioridad para evitar recreaciones
   const handlePriorityChange = useCallback((municipio: string) => {

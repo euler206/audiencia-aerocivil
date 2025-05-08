@@ -1,7 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { aspirantes } from './aspirantes';
-import { loadFromLocalStorage } from './storage';
 import { recalculateAllPlacements } from './prioridades';
 
 // Función para actualizar la plaza deseada de un aspirante específico
@@ -44,6 +43,17 @@ export const updatePlazaDeseada = async (cedula: string, plazaDeseada: string): 
     return false;
   }
 };
+
+// Función para probar localStorage
+const testLocalStorage = () => {
+  localStorage.setItem("test", "testValue");
+  const testValue = localStorage.getItem("test");
+  console.log("Valor de prueba en localStorage:", testValue);
+};
+
+// Llamar a la función de prueba al cargar el archivo
+testLocalStorage();
+
 
 // Función para actualizar todas las plazas deseadas desde Supabase
 export const updateAllPlazasDeseadas = async (): Promise<boolean> => {

@@ -1,6 +1,6 @@
-
 import { aspirantes } from './aspirantes';
 import { plazas } from './plazas';
+import { Aspirante } from './types';
 import { supabase } from '@/integrations/supabase/client';
 
 // Tipo para representar una prioridad
@@ -14,16 +14,12 @@ export const getAvailablePlazaByPriority = (
   prioridades: Prioridad[],
   aspirantePuesto: number
 ): string | null => {
-  // Si no hay prioridades, devolver null
+  // Si no hay prioridades, devolver null.
   if (!prioridades || prioridades.length === 0) return null;
-
-  // Crear un mapa para consulta rápida de plazas
-  const plazasMap = new Map(plazas.map(p => [p.municipio, p.vacantes]));
   
-  // Crear un mapa para contar aspirantes por plaza
-  const plazaCount = new Map<string, number>();
+  const plazaCount = new Map<string, number>()
   aspirantes.forEach(a => {
-    if (a.plazaDeseada && a.puesto < aspirantePuesto) {
+    if(a.plazaDeseada && a.puesto < aspirantePuesto){
       plazaCount.set(
         a.plazaDeseada, 
         (plazaCount.get(a.plazaDeseada) || 0) + 1
@@ -35,115 +31,85 @@ export const getAvailablePlazaByPriority = (
   const sortedPrioridades = [...prioridades].sort((a, b) => a.prioridad - b.prioridad);
   
   // Verificar cada prioridad en orden
-  for (const prioridad of sortedPrioridades) {
-    const vacantes = plazasMap.get(prioridad.municipio);
-    
-    if (!vacantes) continue; // Si no se encuentra la plaza, pasar a la siguiente
-    
-    // Contar cuántos aspirantes con mejor puesto ya seleccionaron esta plaza
-    const selectedByBetter = plazaCount.get(prioridad.municipio) || 0;
-    
-    // Si hay vacantes disponibles, devolver esta plaza
-    if (selectedByBetter < vacantes) {
+  for (const prioridad of sortedPrioridades) {    
+    const vacantes = plazas.find(p => p.municipio === prioridad.municipio)?.vacantes;
+    if (!vacantes) continue;
+    if (!plazaCount.has(prioridad.municipio)) {
+      return prioridad.municipio;
+    }    
+    if (plazaCount.get(prioridad.municipio)! < vacantes){
       return prioridad.municipio;
     }
   }
-  
-  // Si ninguna de las plazas priorizadas está disponible, devolver null
   return null;
 };
 
 // Función para reordenar todas las asignaciones de plazas después de cambios
 export const recalculateAllPlacements = async () => {
+  const plazasMap = new Map(plazas.map(p => [p.municipio, p.vacantes]));
+  const plazaOccupation = new Map<string, number>();
   console.log("Recalculando todas las asignaciones de plazas...");
   
   try {
     // Primero, ordenar aspirantes por puesto (menor número = mayor prioridad)
-    const sortedAspirantes = [...aspirantes].sort((a, b) => a.puesto - b.puesto);
+    const sortedAspirantes = [...aspirantes].sort((a, b) => a.puesto - b.puesto);    
     
     // Mapa para llevar el conteo de ocupación de plazas
-    const plazaOccupation = new Map<string, number>();
+    const { data: allPrioridades, error: allPrioridadesError } = await supabase
+    .from('prioridades')
+    .select('aspirante_id, municipio, prioridad')
+    .order('prioridad', { ascending: true });
     
+    if (allPrioridadesError) throw allPrioridadesError;
+
+    const prioridadesMap = new Map<string,Prioridad[]>()
+    allPrioridades.forEach((prioridad) => {
+      if (!prioridadesMap.has(prioridad.aspirante_id)) {
+        prioridadesMap.set(prioridad.aspirante_id, []);
+      }
+      prioridadesMap.get(prioridad.aspirante_id)?.push({municipio: prioridad.municipio, prioridad: prioridad.prioridad});
+    })
     // Recorrer aspirantes en orden de prioridad
     for (const aspirante of sortedAspirantes) {
       console.log(`Procesando aspirante: ${aspirante.nombre} (Puesto: ${aspirante.puesto})`);
-      
-      // Obtener las prioridades del aspirante desde Supabase primero
-      const { data: prioridadesData, error } = await supabase
-        .from('prioridades')
-        .select('municipio, prioridad')
-        .eq('aspirante_id', aspirante.cedula)
-        .order('prioridad', { ascending: true });
-        
-      let prioridades: Prioridad[] = [];
-      
-      // Si hay error o no hay datos en Supabase, intentar leer desde localStorage
-      if (error || !prioridadesData || prioridadesData.length === 0) {
-        const prioridadesString = localStorage.getItem(`prioridades_${aspirante.cedula}`);
-        if (prioridadesString) {
-          prioridades = JSON.parse(prioridadesString);
-        }
-      } else {
-        prioridades = prioridadesData;
-      }
-      
-      if (!prioridades || prioridades.length === 0) {
+            
+      let prioridades = prioridadesMap.get(aspirante.cedula)
+
+      if (!prioridades) {
         console.log(`No hay prioridades para ${aspirante.cedula}, continuando...`);
-        continue; // Si no tiene prioridades, continuar con el siguiente
+        continue;
       }
       
       // Calcular la plaza disponible según prioridades
       const nuevaPlaza = getAvailablePlazaByPriority(prioridades, aspirante.puesto);
       
-      if (nuevaPlaza) {
+      if (nuevaPlaza){
         console.log(`Asignando plaza: ${nuevaPlaza} a ${aspirante.nombre}`);
-        
-        // Actualizar plazaDeseada en el objeto aspirante
         aspirante.plazaDeseada = nuevaPlaza;
-        
-        // Incrementar conteo de ocupación
-        const currentOccupation = plazaOccupation.get(nuevaPlaza) || 0;
-        plazaOccupation.set(nuevaPlaza, currentOccupation + 1);
-        
-        // Actualizar en base de datos
-        try {
-          const { error } = await supabase
-            .from('aspirantes')
-            .update({ plaza_deseada: nuevaPlaza })
-            .eq('cedula', aspirante.cedula);
-            
-          if (error) {
-            console.error(`Error al actualizar plaza para ${aspirante.cedula}:`, error);
-          }
-        } catch (error) {
-          console.error(`Error en actualización de base de datos para ${aspirante.cedula}:`, error);
-        }
+        plazaOccupation.set(nuevaPlaza, (plazaOccupation.get(nuevaPlaza) || 0) +1);
       } else {
         console.log(`No hay plazas disponibles para ${aspirante.nombre} según sus prioridades`);
-        
-        // Si no hay plaza disponible, borrar su selección actual
         if (aspirante.plazaDeseada) {
           aspirante.plazaDeseada = "";
-          
-          // Actualizar en base de datos
-          try {
-            const { error } = await supabase
-              .from('aspirantes')
-              .update({ plaza_deseada: null })
-              .eq('cedula', aspirante.cedula);
-              
-            if (error) {
-              console.error(`Error al limpiar plaza para ${aspirante.cedula}:`, error);
-            }
-          } catch (error) {
-            console.error(`Error en limpieza de plaza para ${aspirante.cedula}:`, error);
-          }
         }
-      }
+      }        
     }
     
-    console.log("Recalculación de plazas completada");
-    return true;
+    const updates = sortedAspirantes.map((aspirante) => ({
+        cedula: aspirante.cedula,
+        nombre: aspirante.nombre,
+        puesto: aspirante.puesto,
+        plaza_deseada: aspirante.plazaDeseada,
+      }));
+
+    console.log("Contenido del array updates:", updates);
+    const { error: updateError } = await supabase.from('aspirantes').upsert(updates);
+    if (updateError) {
+      console.error("Error al actualizar plazas en la base de datos:", updateError);
+    }else{
+      console.log("Recalculación de plazas completada");
+      return true;
+    }
   } catch (error) {
     console.error("Error durante la recalculación de plazas:", error);
     return false;

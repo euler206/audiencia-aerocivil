@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Aspirante, loadFromLocalStorage, aspirantes } from '@/lib';
+import { Aspirante, aspirantes } from '@/lib';
 import { clearAllSelections } from '@/lib/vacancies';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,7 +22,6 @@ const CandidateList: React.FC = () => {
     const loadData = async () => {
       try {
         console.log("Cargando datos desde localStorage/Supabase...");
-        await loadFromLocalStorage();
         
         // Obtener y ordenar aspirantes
         const sortedAspirantes = getSortedAspirantes();
@@ -70,7 +69,6 @@ const CandidateList: React.FC = () => {
       
       if (success) {
         // Recargar datos y actualizar la interfaz
-        await loadFromLocalStorage();
         setRefreshTrigger(prev => prev + 1);
         
         return true;
@@ -127,7 +125,6 @@ const CandidateList: React.FC = () => {
       console.log("Respuesta de la actualización:", data);
       
       // Recargar datos para actualizar la interfaz
-      await loadFromLocalStorage();
       setRefreshTrigger(prev => prev + 1);
       
       toast({
